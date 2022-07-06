@@ -28,6 +28,7 @@ import {getThemeCustomizations} from "../misc/WhitelabelCustomizations"
 import {CredentialEncryptionMode} from "../misc/credentials/CredentialEncryptionMode"
 import {SecondFactorHandler} from "../misc/2fa/SecondFactorHandler"
 import {SessionType} from "../api/common/SessionType"
+import {TtlBehavior} from "../misc/UsageTestModel.js"
 
 /**
  * This is a collection of all things that need to be initialized/global state to be set after a user has logged in successfully.
@@ -91,6 +92,9 @@ export class PostLoginActions implements IPostLoginAction {
 			// don't wait for it, just invoke
 			locator.fileApp.clearFileData().catch(e => console.log("Failed to clean file data", e))
 		}
+
+
+		locator.usageTestController.setTests(await locator.usageTestModel.loadActiveUsageTests(TtlBehavior.UpToDateOnly))
 	}
 
 	async onFullLoginSuccess(loggedInEvent: LoggedInEvent): Promise<void> {

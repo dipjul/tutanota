@@ -451,14 +451,14 @@ export class MailViewer implements Component<MailViewerAttrs> {
 
 	private renderLoadingIcon(): Children {
 		return m(".progress-panel.flex-v-center.items-center",
-				{
-					key: "loadingIcon",
-					style: {
-						height: "200px",
-					},
+			{
+				key: "loadingIcon",
+				style: {
+					height: "200px",
 				},
-				[progressIcon(), m("small", lang.get("loading_msg"))],
-			)
+			},
+			[progressIcon(), m("small", lang.get("loading_msg"))],
+		)
 	}
 
 	private renderBanners(mail: Mail): Children {
@@ -788,6 +788,8 @@ export class MailViewer implements Component<MailViewerAttrs> {
 			}),
 		)
 
+		const test = locator.usageTestController.getTest("test")
+
 		if (!this.viewModel.isDraftMail()) {
 			actions.push(
 				m(Button, {
@@ -880,6 +882,68 @@ export class MailViewer implements Component<MailViewerAttrs> {
 									type: ButtonType.Dropdown,
 								})
 							}
+
+							test.renderVariant({
+								[0]: () => {
+								},
+								[1]: () => {
+									moreButtons.push({
+										label: () => "Variant 1",
+										click: () => {
+											const stage = test.getStage(0)
+											stage?.setMetric({
+												name: "paymentMethod",
+												value: "paypal"
+											})
+											stage?.setMetric({
+												name: "likert",
+												value: "1"
+											})
+											stage.complete()
+										},
+										icon: () => Icons.Picture,
+										type: ButtonType.Dropdown,
+									})
+								},
+								[2]: () => {
+									moreButtons.push({
+										label: () => "Variant 2",
+										click: () => {
+											const stage = test.getStage(0)
+											stage?.setMetric({
+												name: "paymentMethod",
+												value: "credit"
+											})
+											stage?.setMetric({
+												name: "likert",
+												value: "2"
+											})
+											stage.complete()
+										},
+										icon: () => Icons.Picture,
+										type: ButtonType.Dropdown,
+									})
+								},
+								[3]: () => {
+									moreButtons.push({
+										label: () => "Variant 3",
+										click: () => {
+											const stage = test.getStage(0)
+											stage?.setMetric({
+												name: "paymentMethod",
+												value: "bankTransfer"
+											})
+											stage?.setMetric({
+												name: "likert",
+												value: "3"
+											})
+											stage?.complete()
+										},
+										icon: () => Icons.Picture,
+										type: ButtonType.Dropdown,
+									})
+								}
+							})
 
 							return moreButtons
 						}, width: 300
@@ -1002,7 +1066,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 							),
 							m(".flex",
 								m(ExpanderButton, {
-									style: { paddingTop: "0px" },
+									style: {paddingTop: "0px"},
 									label: "showAll_action",
 									expanded: this.filesExpanded(),
 									onExpandedChange: this.filesExpanded,
