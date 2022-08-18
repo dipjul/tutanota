@@ -39,15 +39,20 @@
  * */
 
 
-import path from "path"
-import fs from "fs-extra"
-import {spawnSync} from "child_process"
+import path from "node:path"
+import fs from "node:fs"
+import {spawnSync} from "node:child_process"
 import jsyaml from "js-yaml"
-import forge from "node-forge"
+import crypto from "node:crypto"
 
 /**
  * Creates a signature on the given application file, writes it to signatureFileName and adds the signature to the yaml file.
  * Requires environment variable HSM_USER_PIN to be set to the HSM user pin.
+ *
+ * if the env var DEBUG_SIGN is set to the path to a directory containing a PEM-encoded private key (filename test.key) and the
+ * matching PEM-encoded public key (test.pubkey), it will be used instead of the HSM.
+ * in that case, the env DEBUG_SIGN_PASSPHRASE must be set as well to open the private key for signing.
+ *
  * @param filePath The application file to sign. Needs to be the full path to the file.
  * @param signatureFileName The signature will be written to that file. Must not contain any path.
  * @param ymlFileName This yaml file will be adapted to include the signature. Must not contain any path.
@@ -57,7 +62,7 @@ export function sign(filePath, signatureFileName, ymlFileName) {
 	const dir = path.dirname(filePath)
 
 	const sigOutPath = process.env.DEBUG_SIGN
-		? signWithSelfSignedCertificate(filePath, signatureFileName, dir)
+		? signWithOwnPrivateKey(filePath, path.join(process.env.DEBUG_SIGN, "test.key"), signatureFileName, dir)
 		: signWithHSM(filePath, signatureFileName, dir)
 
 	if (ymlFileName) {
@@ -73,7 +78,8 @@ export function sign(filePath, signatureFileName, ymlFileName) {
 }
 
 function signWithHSM(filePath, signatureFileName, dir) {
-	let result = spawnSync("/usr/bin/pkcs11-tool", [
+	console.log("sign with HSM")
+	const result = spawnSync("/usr/bin/pkcs11-tool", [
 		"-s",
 		"-m", "SHA512-RSA-PKCS",
 		"--id", "10", // this is the installer verification key
@@ -91,35 +97,42 @@ function signWithHSM(filePath, signatureFileName, dir) {
 	return path.join(dir, signatureFileName)
 }
 
-function signWithSelfSignedCertificate(filePath, signatureFileName, dir) {
-	const sigOutPath = path.join(dir, signatureFileName)
-
-	// copy cert to webserver so it can be easily put into a VM
-	fs.copyFileSync(path.join(process.env.DEBUG_SIGN, "ca.crt"), path.join(dir, "ca.crt"))
+/**
+ * sign the contents of a file with a private key available in PEM format.
+ *
+ * a private key to use here can be created with:
+ * import crypto from "node:crypto"
+ *
+ * const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {
+ * 	modulusLength: 4096,
+ * 	publicKeyEncoding: { type: 'spki', format: 'pem'},
+ * 	privateKeyEncoding: {type: 'pkcs8', format: 'pem', cipher: 'aes-256-cbc', passphrase: 'top secret' }
+ * })
+ *
+ * returns the full path to a file containing the signature in binary format
+ */
+function signWithOwnPrivateKey(fileToSign, privateKeyPemFile, signatureOutFileName, dir) {
+	console.log("sign with private key")
+	if (process.env.DEBUG_SIGN_PASSPHRASE == null) {
+		console.log("faulty environment: DEBUG_SIGN given, but no DEBUG_SIGN_PASSPHRASE")
+		process.exit(1)
+	}
+	const privateKeyPassPhrase = process.env.DEBUG_SIGN_PASSPHRASE
+	const sigOutPath = path.join(dir, signatureOutFileName)
 
 	try {
-		const fileData = fs.readFileSync(filePath) //binary format
-		const lnk = path.join(process.env.DEBUG_SIGN, "test.p12")
-		const privateKey = getPrivateKeyFromCert(lnk)
-		const md = forge.md.sha512.create()
-		md.update(fileData.toString('binary'))
-		const sig = Buffer.from(privateKey.sign(md), 'binary')
+		const fileData = fs.readFileSync(fileToSign) // buffer
+		const privateKeyPem = fs.readFileSync(privateKeyPemFile, {encoding: "utf-8"})
+		const sig = crypto.sign("SHA512", fileData, {
+			key: privateKeyPem,
+			format: "pem",
+			passphrase: privateKeyPassPhrase,
+			cipher: 'aes-256-cbc',
+		})
 		fs.writeFileSync(sigOutPath, sig, null)
 	} catch (e) {
-		console.log('Error:', e.message)
+		console.log(`Error signing ${fileToSign}:`, e.message)
+		process.exit(1)
 	}
 	return sigOutPath
-}
-
-function getPrivateKeyFromCert(lnk) {
-	if (!lnk) {
-		throw new Error("can't sign client, no certificate file name")
-	}
-	const p12b64 = fs.readFileSync(lnk).toString('base64')
-	const p12Der = forge.util.decode64(p12b64)
-	const p12Asn1 = forge.asn1.fromDer(p12Der)
-	const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, "")
-	const bag = p12.getBags({friendlyName: 'user'})["friendlyName"]
-		.find(b => b.key != null)
-	return bag.key
 }
