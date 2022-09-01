@@ -5,8 +5,7 @@ import {
 	getDisplayText,
 	getFolderIcon,
 	getFolderName,
-	getSenderOrRecipientHeading,
-	getSenderOrRecipientHeadingTooltip,
+	getSenderHeading,
 	getSortedCustomFolders,
 	getSortedSystemFolders,
 	isTutanotaTeamMail
@@ -14,7 +13,7 @@ import {
 import {theme} from "../../gui/theme.js"
 import {styles} from "../../gui/styles.js"
 import {ExpanderButton, ExpanderPanel} from "../../gui/base/Expander.js"
-import {File as TutanotaFile} from "../../api/entities/tutanota/TypeRefs.js"
+import {File as TutanotaFile, Mail} from "../../api/entities/tutanota/TypeRefs.js"
 import {BannerType, InfoBanner} from "../../gui/base/InfoBanner.js"
 import {Icons} from "../../gui/base/icons/Icons.js"
 import {EventBanner} from "./EventBanner.js"
@@ -62,6 +61,32 @@ export interface MailViewerHeaderAttrs {
 	onReportMail: () => unknown,
 }
 
+export function getRecipientEmailAddress(mail: Mail) {
+	const allRecipients = mail.toRecipients.concat(mail.ccRecipients).concat(mail.bccRecipients)
+
+	if (allRecipients.length > 0) {
+		return m(".flex.click.small.margin-between-s.state-bg.border-radius", [
+			// FIXME
+			m("", "to:"),
+			m(".text-ellipsis", allRecipients[0].address),
+			m(".flex", allRecipients.length > 1
+				? [
+					`+ ${allRecipients.length - 1}`,
+					m(Icon, {
+						icon: BootIcons.Expand,
+						container: "div",
+						style: {fill: theme.content_fg},
+					})
+				]
+				: ""
+			)
+		])
+	} else {
+		return ""
+	}
+}
+
+
 /** The upper part of the mail viewer, everything but the mail body itself. */
 export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 	private detailsExpanded = false
@@ -72,79 +97,80 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		const dateTime = formatDateWithWeekday(viewModel.mail.receivedDate) + " • " + formatTime(viewModel.mail.receivedDate)
 		const dateTimeFull = formatDateWithWeekdayAndYear(viewModel.mail.receivedDate) + " • " + formatTime(viewModel.mail.receivedDate)
 
-		return m(".header.plr-l.mlr-safe-inset", [
-			m(".flex-space-between.button-min-height", [
-				// the natural height may vary in browsers (Firefox), so set it to button height here to make it similar to the MultiMailViewer
-				m(".flex.flex-column-reverse", [
-					this.detailsExpanded
-						? m("small.flex.text-break", lang.get("from_label"))
-						: m(
-							".small.flex.text-break.selectable.badge-line-height.flex-wrap.pt-s",
-							{
-								title: getSenderOrRecipientHeadingTooltip(viewModel.mail),
-							},
-							[this.tutaoBadge(viewModel), getSenderOrRecipientHeading(viewModel.mail, false)],
-						),
-					viewModel.getFolderText()
-						? m(
-							"small.b.flex.pt",
-							{
-								style: {
-									color: theme.navigation_button,
-								},
-							},
-							viewModel.getFolderText(),
-						)
-						: null,
-				]),
-				!viewModel.isAnnouncement() && styles.isUsingBottomNavigation()
-					? null
-					: m(".pt-0", this.renderShowMoreButton()),
-			]),
-			m(".mb-m", m(ExpanderPanel, {
-						expanded: this.detailsExpanded,
-					},
-					this.renderDetails(attrs, {bubbleMenuWidth: 330}),
-				),
+		return m(".header.plr-l.mlr-safe-inset.pt", [
+			m(".small", getSenderHeading(viewModel.mail, false)),
+			m(
+				".subject.text-break.selectable.mt-xs.b",
+				{
+					"aria-label": lang.get("subject_label") + ", " + (viewModel.getSubject() || ""),
+				},
+				viewModel.getSubject() || "",
+				m(""),
 			),
+			// FIXME translate
+			m(".flex.mt-xs", [
+				getRecipientEmailAddress(viewModel.mail),
+				m(".flex-grow"),
+				m(".flex.items-center.content-accent-fg.svg-content-accent-fg.white-space-pre.ml-s", {
+						// Orca refuses to read ut unless it's not focusable
+						tabindex: TabIndex.Default,
+						"aria-label": lang.get(viewModel.isConfidential() ? "confidential_action" : "nonConfidential_action") + ", " + dateTime,
+					},
+					[
+						viewModel.isConfidential()
+							? m(Icon, {
+								icon: Icons.Lock,
+								style: {
+									fill: theme.content_fg,
+								},
+							})
+							: null,
+						m("small.date.mt-xs.content-fg.selectable",
+							[
+								m("span.noprint", dateTime), // show the short date when viewing
+								m("span.noscreen", dateTimeFull), // show the date with year when printing
+							]
+						),
+						m(".flex-grow"),
+					],
+				)
+			]),
+			// m(".flex-space-between.button-min-height", [
+			// 	// the natural height may vary in browsers (Firefox), so set it to button height here to make it similar to the MultiMailViewer
+			// 	m(".flex.flex-column-reverse", [
+			// 		this.detailsExpanded
+			// 			? m("small.flex.text-break", lang.get("from_label"))
+			// 			: m(
+			// 				".small.flex.text-break.selectable.badge-line-height.flex-wrap.pt-s",
+			// 				{
+			// 					title: getSenderOrRecipientHeadingTooltip(viewModel.mail),
+			// 				},
+			// 				[this.tutaoBadge(viewModel), getSenderOrRecipientHeading(viewModel.mail, false)],
+			// 			),
+			// 		viewModel.getFolderText()
+			// 			? m(
+			// 				"small.b.flex.pt",
+			// 				{
+			// 					style: {
+			// 						color: theme.navigation_button,
+			// 					},
+			// 				},
+			// 				viewModel.getFolderText(),
+			// 			)
+			// 			: null,
+			// 	]),
+			// 	!viewModel.isAnnouncement() && styles.isUsingBottomNavigation()
+			// 		? null
+			// 		: m(".pt-0", this.renderShowMoreButton()),
+			// ]),
+			// m(".mb-m", m(ExpanderPanel, {
+			// 			expanded: this.detailsExpanded,
+			// 		},
+			// 		this.renderDetails(attrs, {bubbleMenuWidth: 330}),
+			// 	),
+			// ),
 			m(".subject-actions.flex-space-between.flex-wrap.mt-xs", [
-				m(".left.flex-grow-shrink-150", [
-					m(
-						".subject.text-break.selectable",
-						{
-							"aria-label": lang.get("subject_label") + ", " + (viewModel.getSubject() || ""),
-						},
-						viewModel.getSubject() || "",
-					),
-					m(".flex.items-center.content-accent-fg.svg-content-accent-fg" + (viewModel.isConfidential() ? ".ml-negative-xs" : ""), {
-							// Orca refuses to read ut unless it's not focusable
-							tabindex: TabIndex.Default,
-							"aria-label": lang.get(viewModel.isConfidential() ? "confidential_action" : "nonConfidential_action") + ", " + dateTime,
-						},
-						[
-							viewModel.isConfidential()
-								? m(Icon, {
-									icon: Icons.Lock,
-									style: {
-										fill: theme.content_fg,
-									},
-								})
-								: null,
-							m("small.date.mt-xs.content-fg.selectable",
-								[
-									m("span.noprint", dateTime), // show the short date when viewing
-									m("span.noscreen", dateTimeFull), // show the date with year when printing
-								]
-							),
-							m(".flex-grow"),
-							m(".flex.flex-column-reverse",
-								!viewModel.isAnnouncement() && styles.isUsingBottomNavigation()
-									? m(".pt-m", this.renderShowMoreButton())
-									: null,
-							),
-						],
-					),
-				]),
+				m(".left.flex-grow-shrink-150", []),
 				styles.isUsingBottomNavigation() ? null : this.actionButtons(attrs),
 			]),
 			styles.isUsingBottomNavigation() ? this.actionButtons(attrs) : null,
@@ -374,7 +400,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 
 						// Otherwise, we show the number of attachments and its total size along with a show all button
 						: [
-							m(".flex.b.center-vertically.pl-s",
+							m(".flex.center-vertically.pl-s",
 								lang.get("attachmentAmount_label", {"{amount}": attachmentCount + ""}) + ` (${formatStorageSize(totalAttachmentSize)})`
 							),
 							m(".flex",

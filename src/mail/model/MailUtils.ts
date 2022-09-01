@@ -77,21 +77,29 @@ export function getDisplayText(name: string | null, mailAddress: string, preferN
 	}
 }
 
+export function getSenderHeading(mail: Mail, preferNameOnly: boolean) {
+	if (isExcludedMailAddress(mail.sender.address)) {
+		return ""
+	} else {
+		return getDisplayText(mail.sender.name, mail.sender.address, preferNameOnly)
+	}
+}
+
+export function getRecipientHeading(mail: Mail, preferNameOnly: boolean) {
+	const allRecipients = mail.toRecipients.concat(mail.ccRecipients).concat(mail.bccRecipients)
+
+	if (allRecipients.length > 0) {
+		return getDisplayText(allRecipients[0].name, allRecipients[0].address, preferNameOnly) + (allRecipients.length > 1 ? ", ..." : "")
+	} else {
+		return ""
+	}
+}
+
 export function getSenderOrRecipientHeading(mail: Mail, preferNameOnly: boolean): string {
 	if (mail.state === MailState.RECEIVED) {
-		if (isExcludedMailAddress(mail.sender.address)) {
-			return ""
-		} else {
-			return getDisplayText(mail.sender.name, mail.sender.address, preferNameOnly)
-		}
+		return getSenderHeading(mail, preferNameOnly)
 	} else {
-		let allRecipients = mail.toRecipients.concat(mail.ccRecipients).concat(mail.bccRecipients)
-
-		if (allRecipients.length > 0) {
-			return getDisplayText(allRecipients[0].name, allRecipients[0].address, preferNameOnly) + (allRecipients.length > 1 ? ", ..." : "")
-		} else {
-			return ""
-		}
+		return getRecipientHeading(mail, preferNameOnly)
 	}
 }
 
