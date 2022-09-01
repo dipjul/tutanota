@@ -37,6 +37,7 @@ import {UserError} from "../../api/main/UserError.js"
 import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {BootIcons} from "../../gui/base/icons/BootIcons.js"
 import {client} from "../../misc/ClientDetector.js"
+import {ToggleButton} from "../../gui/base/ToggleButton.js"
 
 export interface MailAddressAndName {
 	name: string
@@ -169,11 +170,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			// 		this.renderDetails(attrs, {bubbleMenuWidth: 330}),
 			// 	),
 			// ),
-			m(".subject-actions.flex-space-between.flex-wrap.mt-xs", [
-				m(".left.flex-grow-shrink-150", []),
-				styles.isUsingBottomNavigation() ? null : this.actionButtons(attrs),
-			]),
-			styles.isUsingBottomNavigation() ? this.actionButtons(attrs) : null,
+			this.actionButtons(attrs),
 			this.renderConnectionLostBanner(viewModel),
 			this.renderEventBanner(viewModel),
 			this.renderAttachments(viewModel),
@@ -393,24 +390,29 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			attachments.forEach(attachment => totalAttachmentSize += Number(attachment.size))
 
 			return [
-				m(".flex.ml-negative-bubble.flex-space-between", [
+				m(".flex.ml-negative-bubble.margin-between-s.mr-negative-s", [
 					attachmentCount === 1
 						// If we have exactly one attachment, just show the attachment
 						? this.renderAttachmentContainer(viewModel, attachments)
 
 						// Otherwise, we show the number of attachments and its total size along with a show all button
 						: [
-							m(".flex.center-vertically.pl-s",
-								lang.get("attachmentAmount_label", {"{amount}": attachmentCount + ""}) + ` (${formatStorageSize(totalAttachmentSize)})`
+							m(".flex.center-vertically.pl-s", [
+									lang.get("attachmentAmount_label", {"{amount}": attachmentCount + ""}) + ` (${formatStorageSize(totalAttachmentSize)})`
+								]
 							),
-							m(".flex",
-								m(ExpanderButton, {
-									style: {paddingTop: "0px"},
-									label: "showAll_action",
-									expanded: this.filesExpanded,
-									onExpandedChange: (expanded) => this.filesExpanded = expanded,
-								})
-							)
+							m(ToggleButton, {
+								icon: BootIcons.Expand,
+								title: "showAll_action",
+								selected: this.filesExpanded,
+								onSelected: (expanded) => this.filesExpanded = expanded
+							}),
+							m(".flex-grow"),
+							m(IconButton, {
+								icon: Icons.Download,
+								title: "saveAll_action",
+								click: () => viewModel.downloadAll(),
+							}),
 						],
 				]),
 
@@ -420,7 +422,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					},
 					m(".ml-negative-bubble.flex-wrap", [
 						this.renderAttachmentContainer(viewModel, attachments),
-						this.renderDownloadAllButton(viewModel)
 					])
 				) : null,
 			]
@@ -690,7 +691,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			)
 		}
 
-		return m(".action-bar.flex-end.items-center.mr-negative-s.margin-between-s", actions)
+		return m(".action-bar.flex-end.items-center.mr-negative-s.margin-between-s.mt-m", actions)
 	}
 
 	private createAssignActionButton({viewModel}: MailViewerHeaderAttrs): Children {
