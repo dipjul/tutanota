@@ -620,16 +620,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			),
 		})
 
-		const deleteButton = m(IconButton, {
-			title: "delete_action",
-			click: () => {
-				promptAndDeleteMails(viewModel.mailModel, [viewModel.mail], noOp)
-			},
-			icon: Icons.Trash,
-			colors,
-		})
-
-
 		if (viewModel.isDraftMail()) {
 			actions.push(
 				m(IconButton, {
@@ -640,7 +630,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 				}),
 			)
 			actions.push(moveButton)
-			actions.push(deleteButton)
 		} else {
 			const readUnread = viewModel.isUnread()
 				? m(IconButton, {
@@ -653,19 +642,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					click: () => viewModel.setUnread(true),
 					icon: Icons.NoEye,
 				})
-
-			actions.push(readUnread)
-			actions.push(moveButton)
-			actions.push(deleteButton)
-			actions.push(
-				m(IconButton, {
-					title: "more_label",
-					icon: Icons.More,
-					colors,
-					click: this.prepareMoreActions(attrs),
-				}),
-			)
-			actions.push(m(".flex-grow"))
 
 			if (!viewModel.isAnnouncement()) {
 				actions.push(
@@ -698,13 +674,38 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							colors,
 						}),
 					)
+					actions.push(readUnread)
+					actions.push(moveButton)
 				} else if (viewModel.canAssignMails()) {
+					actions.push(readUnread)
 					actions.push(this.createAssignActionButton(attrs))
 				}
 			}
 		}
 
-		return m(".flex-end.items-center.mr-negative-s.ml-negative-s.margin-between-s.mt-m", actions)
+		actions.push(
+			m(IconButton, {
+				title: "delete_action",
+				click: () => {
+					promptAndDeleteMails(viewModel.mailModel, [viewModel.mail], noOp)
+				},
+				icon: Icons.Trash,
+				colors,
+			}),
+		)
+
+		if (!viewModel.isDraftMail()) {
+			actions.push(
+				m(IconButton, {
+					title: "more_label",
+					icon: Icons.More,
+					colors,
+					click: this.prepareMoreActions(attrs),
+				}),
+			)
+		}
+
+		return m(".action-bar.flex-end.items-center.mr-negative-s.margin-between-s.mt-m", actions)
 	}
 
 	private createAssignActionButton({viewModel}: MailViewerHeaderAttrs): Children {
