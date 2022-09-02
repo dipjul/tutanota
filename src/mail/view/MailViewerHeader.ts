@@ -631,6 +631,18 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			)
 			actions.push(moveButton)
 		} else {
+			const readUnread = viewModel.isUnread()
+				? m(IconButton, {
+					title: "markRead_action",
+					click: () => viewModel.setUnread(false),
+					icon: Icons.Eye,
+				})
+				: m(IconButton, {
+					title: "markUnread_action",
+					click: () => viewModel.setUnread(true),
+					icon: Icons.NoEye,
+				})
+
 			if (!viewModel.isAnnouncement()) {
 				actions.push(
 					m(IconButton, {
@@ -662,8 +674,10 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							colors,
 						}),
 					)
+					actions.push(readUnread)
 					actions.push(moveButton)
 				} else if (viewModel.canAssignMails()) {
+					actions.push(readUnread)
 					actions.push(this.createAssignActionButton(attrs))
 				}
 			}
@@ -729,20 +743,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		return createDropdown({
 			lazyButtons: () => {
 				const moreButtons: Array<DropdownButtonAttrs> = []
-
-				if (viewModel.isUnread()) {
-					moreButtons.push({
-						label: "markRead_action",
-						click: () => viewModel.setUnread(false),
-						icon: Icons.Eye,
-					})
-				} else {
-					moreButtons.push({
-						label: "markUnread_action",
-						click: () => viewModel.setUnread(true),
-						icon: Icons.NoEye,
-					})
-				}
 
 				if (!client.isMobileDevice() && viewModel.canExport()) {
 					moreButtons.push({
