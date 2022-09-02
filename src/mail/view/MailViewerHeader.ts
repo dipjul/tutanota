@@ -101,7 +101,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		return m(".header.plr-l.mlr-safe-inset.pt", [
 			m(".small", getSenderHeading(viewModel.mail, false)),
 			m(
-				".subject.text-break.selectable.mt-xs.b",
+				".h5.subject.text-break.selectable.mt-xs.b",
 				{
 					"aria-label": lang.get("subject_label") + ", " + (viewModel.getSubject() || ""),
 				},
