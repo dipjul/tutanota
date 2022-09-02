@@ -126,7 +126,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 								},
 							})
 							: null,
-						m("small.date.mt-xs.content-fg.selectable",
+						m("small.date.content-fg.selectable",
 							[
 								m("span.noprint", dateTime), // show the short date when viewing
 								m("span.noscreen", dateTimeFull), // show the date with year when printing
