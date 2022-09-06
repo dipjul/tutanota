@@ -30,7 +30,7 @@ export class EventBanner implements Component<Attrs> {
 					alignItems: "start",
 					paddingBottom: "0",
 					maxWidth: "100%",
-					marginTop: px(size.vpad),
+					// marginTop: px(size.vpad), // FIXME
 					display: "flex",
 					flexDirection: "column",
 					paddingLeft: px(size.hpad_large),

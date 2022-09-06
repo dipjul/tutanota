@@ -109,7 +109,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 				m(""),
 			),
 			// FIXME translate
-			m(".flex.mt-xs", [
+			m(".flex", [
 				getRecipientEmailAddress(viewModel.mail),
 				m(".flex-grow"),
 				m(".flex.items-center.content-accent-fg.svg-content-accent-fg.white-space-pre.ml-s", {
@@ -173,7 +173,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			this.actionButtons(attrs),
 			this.renderConnectionLostBanner(viewModel),
 			this.renderEventBanner(viewModel),
-			this.renderAttachments(viewModel),
+			// this.renderAttachments(viewModel),
 			this.renderBanners(attrs),
 		])
 	}
@@ -407,12 +407,12 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 								selected: this.filesExpanded,
 								onSelected: (expanded) => this.filesExpanded = expanded
 							}),
-							m(".flex-grow"),
-							m(IconButton, {
-								icon: Icons.Download,
-								title: "saveAll_action",
-								click: () => viewModel.downloadAll(),
-							}),
+							// m(".flex-grow"),
+							// m(IconButton, {
+							// 	icon: Icons.Download,
+							// 	title: "saveAll_action",
+							// 	click: () => viewModel.downloadAll(),
+							// }),
 						],
 				]),
 
@@ -592,6 +592,10 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 	private actionButtons(attrs: MailViewerHeaderAttrs): Children {
 		const {viewModel} = attrs
 		const actions: Children = []
+
+		actions.push(this.renderAttachments(attrs.viewModel))
+		actions.push(m(".flex-grow"))
+
 		const colors = ButtonColor.Content
 		const moveButton = m(IconButton, {
 			title: "move_action",
@@ -631,18 +635,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			)
 			actions.push(moveButton)
 		} else {
-			const readUnread = viewModel.isUnread()
-				? m(IconButton, {
-					title: "markRead_action",
-					click: () => viewModel.setUnread(false),
-					icon: Icons.Eye,
-				})
-				: m(IconButton, {
-					title: "markUnread_action",
-					click: () => viewModel.setUnread(true),
-					icon: Icons.NoEye,
-				})
-
 			if (!viewModel.isAnnouncement()) {
 				actions.push(
 					m(IconButton, {
@@ -674,10 +666,8 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							colors,
 						}),
 					)
-					actions.push(readUnread)
 					actions.push(moveButton)
 				} else if (viewModel.canAssignMails()) {
-					actions.push(readUnread)
 					actions.push(this.createAssignActionButton(attrs))
 				}
 			}
@@ -705,7 +695,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			)
 		}
 
-		return m(".action-bar.flex-end.items-center.mr-negative-s.margin-between-s.mt-m", actions)
+		return m(".action-bar.flex-end.items-center.mr-negative-s.margin-between-s.mt-xs", actions)
 	}
 
 	private createAssignActionButton({viewModel}: MailViewerHeaderAttrs): Children {
@@ -743,6 +733,19 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		return createDropdown({
 			lazyButtons: () => {
 				const moreButtons: Array<DropdownButtonAttrs> = []
+				if (viewModel.isUnread()) {
+					moreButtons.push({
+						label: "markRead_action",
+						click: () => viewModel.setUnread(false),
+						icon: Icons.Eye,
+					})
+				} else {
+					moreButtons.push({
+						label: "markUnread_action",
+						click: () => viewModel.setUnread(true),
+						icon: Icons.NoEye,
+					})
+				}
 
 				if (!client.isMobileDevice() && viewModel.canExport()) {
 					moreButtons.push({
