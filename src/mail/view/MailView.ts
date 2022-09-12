@@ -48,7 +48,7 @@ import {MAIL_PREFIX, navButtonRoutes, throttleRoute} from "../../misc/RouteChang
 import {attachDropdown, DomRectReadOnlyPolyfilled, Dropdown} from "../../gui/base/Dropdown.js"
 import {MailFolderRow} from "./MailFolderRow"
 import {styles} from "../../gui/styles"
-import {size} from "../../gui/size"
+import {px, size} from "../../gui/size"
 import {FolderColumnView} from "../../gui/FolderColumnView.js"
 import {modal} from "../../gui/base/Modal"
 import {UserError} from "../../api/main/UserError"
@@ -63,6 +63,7 @@ import {MailViewerViewModel} from "./MailViewerViewModel"
 import {readLocalFiles} from "../../file/FileController.js"
 import {IconButton, IconButtonAttrs} from "../../gui/base/IconButton.js"
 import {ButtonSize} from "../../gui/base/ButtonSize.js"
+import {displayOverlay} from "../../gui/base/Overlay.js"
 
 assertMainOrNode()
 
@@ -460,8 +461,8 @@ export class MailView implements CurrentView {
 					.map(f => ({
 						label: () => getFolderName(f),
 						click: () => moveMails({mailModel: locator.mailModel, mails: selectedMails, targetMailFolder: f}),
-					icon: getFolderIcon(f)(),
-					size: ButtonSize.Compact,
+						icon: getFolderIcon(f)(),
+						size: ButtonSize.Compact,
 					}))
 			}, 300)
 
@@ -793,6 +794,72 @@ export class MailView implements CurrentView {
 				this.mailViewerViewModel.updateMail(viewModelParams)
 			} else {
 				this.mailViewerViewModel = createMailViewerViewModel(viewModelParams)
+				displayOverlay(
+					() => {
+						return {
+							bottom: "0",
+							left: "0",
+							right: "0",
+							height: px(size.bottom_nav_bar),
+						}
+					},
+					{
+						view(vnode): Children {
+							// FIXME: placeholder
+							const actions: Children[] = []
+							actions.push(m(IconButton, {
+								title: "reply_action",
+								click: noOp,
+								icon: Icons.Reply,
+							}))
+
+
+							actions.push(
+								m(IconButton, {
+									title: "forward_action",
+									click: noOp,
+									icon: Icons.Forward,
+								}),
+							)
+
+							actions.push(
+								m(IconButton, {
+									title: "delete_action",
+									click: noOp,
+									icon: Icons.Trash,
+								}),
+							)
+
+							actions.push(
+								m(IconButton, {
+									title: "move_action",
+									click: noOp,
+									icon: Icons.Folder,
+								}),
+							)
+
+							actions.push(
+								m(IconButton, {
+									title: "more_label",
+									click: noOp,
+									icon: Icons.More,
+								}),
+							)
+
+							return m(".bottom-action-bar.flex.items-center", {
+								style: {
+									justifyContent: "space-around",
+									height: px(size.bottom_nav_bar)
+								}
+							}, [
+								actions,
+							])
+						}
+					},
+					undefined,
+					undefined,
+					""
+				)
 			}
 
 			const url = `/mail/${mails[0]._id.join("/")}`

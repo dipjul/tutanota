@@ -38,6 +38,7 @@ import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {BootIcons} from "../../gui/base/icons/BootIcons.js"
 import {client} from "../../misc/ClientDetector.js"
 import {ToggleButton} from "../../gui/base/ToggleButton.js"
+import vi from "../../translations/vi.js"
 
 export interface MailAddressAndName {
 	name: string
@@ -72,60 +73,89 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		const dateTime = formatDateWithWeekday(viewModel.mail.receivedDate) + " • " + formatTime(viewModel.mail.receivedDate)
 		const dateTimeFull = formatDateWithWeekdayAndYear(viewModel.mail.receivedDate) + " • " + formatTime(viewModel.mail.receivedDate)
 
-		return m(".header.mlr-safe-inset", [
-			// Subject and actions
-			m(".flex", [
-				m(
-					".h5.subject.text-break.selectable.b.flex-grow.pl-l.pr",
-					{
-						"aria-label": lang.get("subject_label") + ", " + (viewModel.getSubject() || ""),
-						style: {marginTop: "12px"},
-					},
-					viewModel.getSubject() || "",
-				),
-				m("", {
-					style: {
-						marginRight: "12px",
-					}
-				}, this.actionButtons(attrs))
+		if (styles.isSingleColumnLayout()) {
+			return m(".header.mlr-safe-inset.mt", [
+				this.renderAddressesAndDate(viewModel, attrs, dateTime, dateTimeFull),
+				m(ExpanderPanel, {
+					expanded: this.detailsExpanded,
+				}, this.renderDetails(attrs, {bubbleMenuWidth: 300})),
+				m(".plr-l", this.renderAttachments(viewModel)),
+				this.renderConnectionLostBanner(viewModel),
+				this.renderEventBanner(viewModel),
+				m(".plr-l", this.renderBanners(attrs)),
+				// FIXME
+				m("", this.renderSubject(viewModel)),
+			])
+		} else {
+			return m(".header.mlr-safe-inset", [
+				// Subject and actions
+				this.renderSubjectActionsLine(viewModel, attrs),
+				// addresses and buttons
+				this.renderAddressesAndDate(viewModel, attrs, dateTime, dateTimeFull),
+				m(ExpanderPanel, {
+					expanded: this.detailsExpanded,
+				}, this.renderDetails(attrs, {bubbleMenuWidth: 300})),
+				m(".plr-l", this.renderAttachments(viewModel)),
+				this.renderConnectionLostBanner(viewModel),
+				this.renderEventBanner(viewModel),
+				m(".plr-l", this.renderBanners(attrs)),
+			])
+		}
+	}
+
+	private renderAddressesAndDate(viewModel: MailViewerViewModel, attrs: MailViewerHeaderAttrs, dateTime: string, dateTimeFull: string) {
+		return m(".flex.plr-l.mt-xs", [
+			m(".flex.col", [
+				m(".small", getSenderHeading(viewModel.mail, false)),
+				m(".flex", this.getRecipientEmailAddress(attrs)),
 			]),
-			// addresses and buttons
-			m(".flex.plr-l.mt-xs", [
-				m(".flex.col", [
-					m(".small", getSenderHeading(viewModel.mail, false)),
-					m(".flex", this.getRecipientEmailAddress(attrs)),
-				]),
-				m(".flex-grow"),
-				m(".flex.items-end.content-accent-fg.svg-content-accent-fg.white-space-pre.ml-s", {
-						// Orca refuses to read ut unless it's not focusable
-						tabindex: TabIndex.Default,
-						"aria-label": lang.get(viewModel.isConfidential() ? "confidential_action" : "nonConfidential_action") + ", " + dateTime,
-					},
-					[
-						viewModel.isConfidential()
-							? m(Icon, {
-								icon: Icons.Lock,
-								style: {
-									fill: theme.content_fg,
-								},
-							})
-							: null,
-						m("small.date.content-fg.selectable",
-							[
-								m("span.noprint", dateTime), // show the short date when viewing
-								m("span.noscreen", dateTimeFull), // show the date with year when printing
-							]
-						),
-						m(".flex-grow"),
-					],
-				)
-			]),
-			m(ExpanderPanel, {
-				expanded: this.detailsExpanded,
-			}, this.renderDetails(attrs, {bubbleMenuWidth: 300})),
-			m(".plr-l", this.renderAttachments(viewModel)),
-			m(".plr-l", this.renderBanners(attrs)),
+			m(".flex-grow"),
+			m(".flex.items-end.content-accent-fg.svg-content-accent-fg.white-space-pre.ml-s", {
+					// Orca refuses to read ut unless it's not focusable
+					tabindex: TabIndex.Default,
+					"aria-label": lang.get(viewModel.isConfidential() ? "confidential_action" : "nonConfidential_action") + ", " + dateTime,
+				},
+				[
+					viewModel.isConfidential()
+						? m(Icon, {
+							icon: Icons.Lock,
+							style: {
+								fill: theme.content_fg,
+							},
+						})
+						: null,
+					m("small.date.content-fg.selectable",
+						[
+							m("span.noprint", dateTime), // show the short date when viewing
+							m("span.noscreen", dateTimeFull), // show the date with year when printing
+						]
+					),
+					m(".flex-grow"),
+				],
+			)
 		])
+	}
+
+	private renderSubjectActionsLine(viewModel: MailViewerViewModel, attrs: MailViewerHeaderAttrs) {
+		return m(".flex", [
+			this.renderSubject(viewModel),
+			m("", {
+				style: {
+					marginRight: "12px",
+				}
+			}, this.actionButtons(attrs))
+		])
+	}
+
+	private renderSubject(viewModel: MailViewerViewModel) {
+		return m(
+			".h5.subject.text-break.selectable.b.flex-grow.pl-l.pr",
+			{
+				"aria-label": lang.get("subject_label") + ", " + (viewModel.getSubject() || ""),
+				style: {marginTop: "12px"},
+			},
+			viewModel.getSubject() || "",
+		)
 	}
 
 	private renderBanners(attrs: MailViewerHeaderAttrs): Children {
