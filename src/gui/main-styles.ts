@@ -1368,8 +1368,11 @@ styles.registerStyle("main", () => {
 			width: "initial",
 			"margin-left": "auto",
 		},
-		".margin-between-s > :not(:first-child)": {
+		".ml-between-s > :not(:first-child)": {
 			"margin-left": px(size.hpad_small),
+		},
+		".mt-between-s > :not(:first-child)": {
+			"margin-top": px(size.hpad_small),
 		},
 		// dropdown
 		".dropdown-panel": {
@@ -1471,9 +1474,10 @@ styles.registerStyle("main", () => {
 		},
 		".bubble": {
 			"max-width": "300px",
-			// make the visible button smaller by 7px without changing the actual click area
-			"border-radius": px(size.border_radius + (size.button_height - size.button_height_bubble) / 2),
-			border: `${px(size.bubble_border_width)} solid ${theme.content_bg}`,
+			"border-radius": px(size.border_radius),
+			"height": px(size.button_height_bubble),
+			// FIXME
+			// border: `${px(size.bubble_border_width)} solid ${theme.content_bg}`,
 			"background-color": theme.button_bubble_bg,
 			color: theme.button_bubble_fg,
 		},

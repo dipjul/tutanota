@@ -299,7 +299,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 			helpLabel: () => getConfidentialStateMessage(model.isConfidential()),
 			value: model.getSubject(),
 			oninput: val => model.setSubject(val),
-			injectionsRight: () => m(".flex.end.margin-between-s.items-center", {
+			injectionsRight: () => m(".flex.end.ml-between-s.items-center", {
 				style: {
 					// all this injection stuff is messy, this is the easiest way to center it
 					height: "40px",

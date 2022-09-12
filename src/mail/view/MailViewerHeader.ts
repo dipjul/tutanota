@@ -12,8 +12,8 @@ import {
 } from "../model/MailUtils.js"
 import {theme} from "../../gui/theme.js"
 import {styles} from "../../gui/styles.js"
-import {ExpanderButton, ExpanderPanel} from "../../gui/base/Expander.js"
-import {File as TutanotaFile, Mail} from "../../api/entities/tutanota/TypeRefs.js"
+import {ExpanderPanel} from "../../gui/base/Expander.js"
+import {File as TutanotaFile} from "../../api/entities/tutanota/TypeRefs.js"
 import {BannerType, InfoBanner} from "../../gui/base/InfoBanner.js"
 import {Icons} from "../../gui/base/icons/Icons.js"
 import {EventBanner} from "./EventBanner.js"
@@ -24,7 +24,7 @@ import {Icon, progressIcon} from "../../gui/base/Icon.js"
 import {formatDateWithWeekday, formatDateWithWeekdayAndYear, formatStorageSize, formatTime} from "../../misc/Formatter.js"
 import {isAndroidApp, isDesktop, isIOSApp} from "../../api/common/Env.js"
 import {Button, ButtonAttrs, ButtonColor, ButtonType} from "../../gui/base/Button.js"
-import {size} from "../../gui/size.js"
+import {px, size} from "../../gui/size.js"
 import {showProgressDialog} from "../../gui/dialogs/ProgressDialog.js"
 import Badge from "../../gui/base/Badge.js"
 import {ContentBlockingStatus, MailViewerViewModel} from "./MailViewerViewModel.js"
@@ -62,32 +62,6 @@ export interface MailViewerHeaderAttrs {
 	onReportMail: () => unknown,
 }
 
-export function getRecipientEmailAddress(mail: Mail) {
-	const allRecipients = mail.toRecipients.concat(mail.ccRecipients).concat(mail.bccRecipients)
-
-	if (allRecipients.length > 0) {
-		return m(".flex.click.small.margin-between-s.state-bg.border-radius", [
-			// FIXME
-			m("", "to:"),
-			m(".text-ellipsis", allRecipients[0].address),
-			m(".flex", allRecipients.length > 1
-				? [
-					`+ ${allRecipients.length - 1}`,
-					m(Icon, {
-						icon: BootIcons.Expand,
-						container: "div",
-						style: {fill: theme.content_fg},
-					})
-				]
-				: ""
-			)
-		])
-	} else {
-		return ""
-	}
-}
-
-
 /** The upper part of the mail viewer, everything but the mail body itself. */
 export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 	private detailsExpanded = false
@@ -98,21 +72,31 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		const dateTime = formatDateWithWeekday(viewModel.mail.receivedDate) + " • " + formatTime(viewModel.mail.receivedDate)
 		const dateTimeFull = formatDateWithWeekdayAndYear(viewModel.mail.receivedDate) + " • " + formatTime(viewModel.mail.receivedDate)
 
-		return m(".header.plr-l.mlr-safe-inset.pt", [
-			m(".small", getSenderHeading(viewModel.mail, false)),
-			m(
-				".h5.subject.text-break.selectable.mt-xs.b",
-				{
-					"aria-label": lang.get("subject_label") + ", " + (viewModel.getSubject() || ""),
-				},
-				viewModel.getSubject() || "",
-				m(""),
-			),
-			// FIXME translate
+		return m(".header.mlr-safe-inset", [
+			// Subject and actions
 			m(".flex", [
-				getRecipientEmailAddress(viewModel.mail),
+				m(
+					".h5.subject.text-break.selectable.b.flex-grow.pl-l.pr",
+					{
+						"aria-label": lang.get("subject_label") + ", " + (viewModel.getSubject() || ""),
+						style: {marginTop: "12px"},
+					},
+					viewModel.getSubject() || "",
+				),
+				m("", {
+					style: {
+						marginRight: "12px",
+					}
+				}, this.actionButtons(attrs))
+			]),
+			// addresses and buttons
+			m(".flex.plr-l.mt-xs", [
+				m(".flex.col", [
+					m(".small", getSenderHeading(viewModel.mail, false)),
+					m(".flex", this.getRecipientEmailAddress(attrs)),
+				]),
 				m(".flex-grow"),
-				m(".flex.items-center.content-accent-fg.svg-content-accent-fg.white-space-pre.ml-s", {
+				m(".flex.items-end.content-accent-fg.svg-content-accent-fg.white-space-pre.ml-s", {
 						// Orca refuses to read ut unless it's not focusable
 						tabindex: TabIndex.Default,
 						"aria-label": lang.get(viewModel.isConfidential() ? "confidential_action" : "nonConfidential_action") + ", " + dateTime,
@@ -136,45 +120,11 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					],
 				)
 			]),
-			// m(".flex-space-between.button-min-height", [
-			// 	// the natural height may vary in browsers (Firefox), so set it to button height here to make it similar to the MultiMailViewer
-			// 	m(".flex.flex-column-reverse", [
-			// 		this.detailsExpanded
-			// 			? m("small.flex.text-break", lang.get("from_label"))
-			// 			: m(
-			// 				".small.flex.text-break.selectable.badge-line-height.flex-wrap.pt-s",
-			// 				{
-			// 					title: getSenderOrRecipientHeadingTooltip(viewModel.mail),
-			// 				},
-			// 				[this.tutaoBadge(viewModel), getSenderOrRecipientHeading(viewModel.mail, false)],
-			// 			),
-			// 		viewModel.getFolderText()
-			// 			? m(
-			// 				"small.b.flex.pt",
-			// 				{
-			// 					style: {
-			// 						color: theme.navigation_button,
-			// 					},
-			// 				},
-			// 				viewModel.getFolderText(),
-			// 			)
-			// 			: null,
-			// 	]),
-			// 	!viewModel.isAnnouncement() && styles.isUsingBottomNavigation()
-			// 		? null
-			// 		: m(".pt-0", this.renderShowMoreButton()),
-			// ]),
-			// m(".mb-m", m(ExpanderPanel, {
-			// 			expanded: this.detailsExpanded,
-			// 		},
-			// 		this.renderDetails(attrs, {bubbleMenuWidth: 330}),
-			// 	),
-			// ),
-			this.actionButtons(attrs),
-			this.renderConnectionLostBanner(viewModel),
-			this.renderEventBanner(viewModel),
-			// this.renderAttachments(viewModel),
-			this.renderBanners(attrs),
+			m(ExpanderPanel, {
+				expanded: this.detailsExpanded,
+			}, this.renderDetails(attrs, {bubbleMenuWidth: 300})),
+			m(".plr-l", this.renderAttachments(viewModel)),
+			m(".plr-l", this.renderBanners(attrs)),
 		])
 	}
 
@@ -218,158 +168,151 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			: null
 	}
 
-	private renderShowMoreButton() {
-		return m(ExpanderButton, {
-			label: "showMore_action",
-			expanded: this.detailsExpanded,
-			onExpandedChange: (expanded) => this.detailsExpanded = expanded,
-		})
-	}
-
 	private renderDetails(attrs: MailViewerHeaderAttrs, {bubbleMenuWidth}: {bubbleMenuWidth: number}): Children {
 		const {viewModel, createMailAddressContextButtons} = attrs
 		const envelopeSender = viewModel.getDifferentEnvelopeSender()
-		return [
-			m(RecipientButton, {
-				label: getDisplayText(viewModel.getSender().name, viewModel.getSender().address, false),
-				click: createAsyncDropdown({
-					lazyButtons: () => createMailAddressContextButtons({
-						mailAddress: viewModel.getSender(),
-						defaultInboxRuleField: InboxRuleType.FROM_EQUALS
-					}), width: bubbleMenuWidth
-				}),
-			}),
-			envelopeSender
-				? [
-					m(".small", lang.get("sender_label")),
+		return m(".plr-l", [
+				m(".mt-s", m(".small.b", lang.get("from_label")),
 					m(RecipientButton, {
-						label: getDisplayText("", envelopeSender, false),
+						label: getDisplayText(viewModel.getSender().name, viewModel.getSender().address, false),
 						click: createAsyncDropdown({
-							lazyButtons: async () => {
-								const childElements = [
-									{
-										info: lang.get("envelopeSenderInfo_msg"),
-										center: false,
-										bold: false,
-									},
-									{
-										info: envelopeSender,
-										center: true,
-										bold: true,
-									},
-								]
-								const contextButtons = await createMailAddressContextButtons(
-									{
-										mailAddress: {
-											address: envelopeSender,
-											name: "",
-										},
-										defaultInboxRuleField: InboxRuleType.FROM_EQUALS,
-										createContact: false
-									},
-								)
-								return [...childElements, ...contextButtons]
-							}, width: bubbleMenuWidth
+							lazyButtons: () => createMailAddressContextButtons({
+								mailAddress: viewModel.getSender(),
+								defaultInboxRuleField: InboxRuleType.FROM_EQUALS
+							}), width: bubbleMenuWidth
 						}),
 					}),
-				]
-				: null,
-			viewModel.getToRecipients().length
-				? [
-					m(".small", lang.get("to_label")),
-					m(
-						".flex-start.flex-wrap",
-						viewModel.getToRecipients().map(recipient =>
+					envelopeSender
+						? [
+							m(".small.b", lang.get("sender_label")),
 							m(RecipientButton, {
-								label: getDisplayText(recipient.name, recipient.address, false),
-								click: createAsyncDropdown(
-									{
-										lazyButtons: () => createMailAddressContextButtons({
-											mailAddress: recipient,
-											defaultInboxRuleField: InboxRuleType.RECIPIENT_TO_EQUALS
-										}), width: bubbleMenuWidth
-									},
-								),
-								// To wrap text inside flex container, we need to allow element to shrink and pick own width
-								style: {
-									flex: "0 1 auto",
-								},
-							}),
-						),
-					),
-				]
-				: null,
-			viewModel.getCcRecipients().length
-				? [
-					m(".small", lang.get("cc_label")),
-					m(
-						".flex-start.flex-wrap",
-						viewModel.getCcRecipients().map(recipient =>
-							m(RecipientButton, {
-								label: getDisplayText(recipient.name, recipient.address, false),
-								click: createAsyncDropdown(
-									{
-										lazyButtons: () => createMailAddressContextButtons({
-											mailAddress: recipient,
-											defaultInboxRuleField: InboxRuleType.RECIPIENT_CC_EQUALS
-										}), width: bubbleMenuWidth
-									},
-								),
-								style: {
-									flex: "0 1 auto",
-								},
-							}),
-						),
-					),
-				]
-				: null,
-			viewModel.getBccRecipients().length
-				? [
-					m(".small", lang.get("bcc_label")),
-					m(
-						".flex-start.flex-wrap",
-						viewModel.getBccRecipients().map(recipient =>
-							m(RecipientButton, {
-								label: getDisplayText(recipient.name, recipient.address, false),
-								click: createAsyncDropdown(
-									{
-										lazyButtons: () => createMailAddressContextButtons({
-											mailAddress: recipient,
-											defaultInboxRuleField: InboxRuleType.RECIPIENT_BCC_EQUALS
-										}), width: bubbleMenuWidth
-									},
-								),
-								style: {
-									flex: "0 1 auto",
-								},
-							}),
-						),
-					),
-				]
-				: null,
-			viewModel.getReplyTos().length
-				? [
-					m(".small", lang.get("replyTo_label")),
-					m(
-						".flex-start.flex-wrap",
-						viewModel.getReplyTos().map(recipient =>
-							m(RecipientButton, {
-								label: getDisplayText(recipient.name, recipient.address, false),
+								label: getDisplayText("", envelopeSender, false),
 								click: createAsyncDropdown({
-									lazyButtons: () => createMailAddressContextButtons({
-										mailAddress: recipient,
-										defaultInboxRuleField: null
-									}), width: bubbleMenuWidth
+									lazyButtons: async () => {
+										const childElements = [
+											{
+												info: lang.get("envelopeSenderInfo_msg"),
+												center: false,
+												bold: false,
+											},
+											{
+												info: envelopeSender,
+												center: true,
+												bold: true,
+											},
+										]
+										const contextButtons = await createMailAddressContextButtons(
+											{
+												mailAddress: {
+													address: envelopeSender,
+													name: "",
+												},
+												defaultInboxRuleField: InboxRuleType.FROM_EQUALS,
+												createContact: false
+											},
+										)
+										return [...childElements, ...contextButtons]
+									}, width: bubbleMenuWidth
 								}),
-								style: {
-									flex: "0 1 auto",
-								},
 							}),
+						]
+						: null
+				),
+				m(".mt-s", viewModel.getToRecipients().length
+					? [
+						m(".small.b", lang.get("to_label")),
+						m(".flex.col.mt-between-s", viewModel.getToRecipients().map(recipient =>
+								m(".flex", m(RecipientButton, {
+									label: getDisplayText(recipient.name, recipient.address, false),
+									click: createAsyncDropdown(
+										{
+											lazyButtons: () => createMailAddressContextButtons({
+												mailAddress: recipient,
+												defaultInboxRuleField: InboxRuleType.RECIPIENT_TO_EQUALS
+											}), width: bubbleMenuWidth
+										},
+									),
+									// To wrap text inside flex container, we need to allow element to shrink and pick own width
+									style: {
+										flex: "0 1 auto",
+									},
+								})),
+							),
 						),
-					),
-				]
-				: null,
-		]
+					]
+					: null),
+				m(".mt-s", viewModel.getCcRecipients().length
+					? [
+						m(".small.b", lang.get("cc_label")),
+						m(
+							".flex-start.flex-wrap",
+							viewModel.getCcRecipients().map(recipient =>
+								m(RecipientButton, {
+									label: getDisplayText(recipient.name, recipient.address, false),
+									click: createAsyncDropdown(
+										{
+											lazyButtons: () => createMailAddressContextButtons({
+												mailAddress: recipient,
+												defaultInboxRuleField: InboxRuleType.RECIPIENT_CC_EQUALS
+											}), width: bubbleMenuWidth
+										},
+									),
+									style: {
+										flex: "0 1 auto",
+									},
+								}),
+							),
+						),
+					]
+					: null),
+				m(".mt-s", viewModel.getBccRecipients().length
+					? [
+						m(".small.b", lang.get("bcc_label")),
+						m(
+							".flex-start.flex-wrap",
+							viewModel.getBccRecipients().map(recipient =>
+								m(RecipientButton, {
+									label: getDisplayText(recipient.name, recipient.address, false),
+									click: createAsyncDropdown(
+										{
+											lazyButtons: () => createMailAddressContextButtons({
+												mailAddress: recipient,
+												defaultInboxRuleField: InboxRuleType.RECIPIENT_BCC_EQUALS
+											}), width: bubbleMenuWidth
+										},
+									),
+									style: {
+										flex: "0 1 auto",
+									},
+								}),
+							),
+						),
+					]
+					: null),
+				m(".mt-s", viewModel.getReplyTos().length
+					? [
+						m(".small.b", lang.get("replyTo_label")),
+						m(
+							".flex-start.flex-wrap",
+							viewModel.getReplyTos().map(recipient =>
+								m(RecipientButton, {
+									label: getDisplayText(recipient.name, recipient.address, false),
+									click: createAsyncDropdown({
+										lazyButtons: () => createMailAddressContextButtons({
+											mailAddress: recipient,
+											defaultInboxRuleField: null
+										}), width: bubbleMenuWidth
+									}),
+									style: {
+										flex: "0 1 auto",
+									},
+								}),
+							),
+						),
+					]
+					: null),
+			]
+		)
 	}
 
 	private renderAttachments(viewModel: MailViewerViewModel): Children {
@@ -390,7 +333,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			attachments.forEach(attachment => totalAttachmentSize += Number(attachment.size))
 
 			return [
-				m(".flex.ml-negative-bubble.margin-between-s.mr-negative-s", [
+				m(".flex.ml-between-s", [
 					attachmentCount === 1
 						// If we have exactly one attachment, just show the attachment
 						? this.renderAttachmentContainer(viewModel, attachments)
@@ -407,29 +350,34 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 								selected: this.filesExpanded,
 								onSelected: (expanded) => this.filesExpanded = expanded
 							}),
-							// m(".flex-grow"),
-							// m(IconButton, {
-							// 	icon: Icons.Download,
-							// 	title: "saveAll_action",
-							// 	click: () => viewModel.downloadAll(),
-							// }),
+							m(".flex-grow"),
+							m(IconButton, {
+								icon: Icons.Download,
+								title: "saveAll_action",
+								click: () => viewModel.downloadAll(),
+							}),
 						],
 				]),
 
 				// if we have more than one attachment, list them here in this expander panel
-				attachments.length > 1 ? m(ExpanderPanel, {
-						expanded: this.filesExpanded,
-					},
-					m(".ml-negative-bubble.flex-wrap", [
-						this.renderAttachmentContainer(viewModel, attachments),
-					])
-				) : null,
+				attachments.length > 1
+					? m(ExpanderPanel, {
+							expanded: this.filesExpanded,
+						},
+						m(".flex.flex-wrap", {
+							style: {
+								"column-gap": px(size.hpad),
+							}
+						}, [
+							this.renderAttachmentContainer(viewModel, attachments),
+						])
+					) : null,
 			]
 		}
 	}
 
 	private renderAttachmentContainer(viewModel: MailViewerViewModel, attachments: TutanotaFile[]): Children {
-		return m("", attachments.map(attachment => this.renderAttachmentButton(viewModel, attachment))) // wrap attachments in a div to ensure buttons after the list don't get placed weirdly
+		return attachments.map(attachment => this.renderAttachmentButton(viewModel, attachment)) // wrap attachments in a div to ensure buttons after the list don't get placed weirdly
 	}
 
 	private renderAttachmentButton(viewModel: MailViewerViewModel, attachment: TutanotaFile): Children {
@@ -593,10 +541,20 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		const {viewModel} = attrs
 		const actions: Children = []
 
-		actions.push(this.renderAttachments(attrs.viewModel))
-		actions.push(m(".flex-grow"))
+		// actions.push(this.renderAttachments(attrs.viewModel))
+		// actions.push(m(".flex-grow"))
 
 		const colors = ButtonColor.Content
+
+		const separator = m("", {
+			style: {
+				width: "0",
+				// FIXME
+				height: "24px",
+				border: `0.5px solid ${theme.content_border}`,
+			}
+		})
+
 		const moveButton = m(IconButton, {
 			title: "move_action",
 			icon: Icons.Folder,
@@ -666,6 +624,8 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							colors,
 						}),
 					)
+					// FIXME
+					actions.push(separator)
 					actions.push(moveButton)
 				} else if (viewModel.canAssignMails()) {
 					actions.push(this.createAssignActionButton(attrs))
@@ -695,7 +655,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			)
 		}
 
-		return m(".action-bar.flex-end.items-center.mr-negative-s.margin-between-s.mt-xs", actions)
+		return m(".action-bar.flex-end.items-center.mr-negative-s.ml-between-s.mt-xs", actions)
 	}
 
 	private createAssignActionButton({viewModel}: MailViewerHeaderAttrs): Children {
@@ -811,4 +771,34 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			}, width: 300
 		})
 	}
+
+	getRecipientEmailAddress({viewModel}: MailViewerHeaderAttrs) {
+		const {mail} = viewModel
+		const allRecipients = mail.toRecipients.concat(mail.ccRecipients).concat(mail.bccRecipients)
+
+		if (allRecipients.length > 0) {
+			return m(".flex.click.small.ml-between-s.state-bg.border-radius.plr-s.ml-negative-s", {
+				toggled: String(this.detailsExpanded),
+				"aria-pressed": String(this.detailsExpanded),
+				onclick: () => {
+					this.detailsExpanded = !this.detailsExpanded
+				}
+			}, [
+				m("", "to:"),
+				m(".text-ellipsis", allRecipients[0].address),
+				m(".flex", [
+						allRecipients.length > 1 ? `+ ${allRecipients.length - 1}` : null,
+						m(Icon, {
+							icon: BootIcons.Expand,
+							container: "div",
+							style: {fill: theme.content_fg},
+						})
+					],
+				)
+			])
+		} else {
+			return ""
+		}
+	}
+
 }
