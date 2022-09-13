@@ -37,8 +37,6 @@ import {UserError} from "../../api/main/UserError.js"
 import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {BootIcons} from "../../gui/base/icons/BootIcons.js"
 import {client} from "../../misc/ClientDetector.js"
-import {ToggleButton} from "../../gui/base/ToggleButton.js"
-import vi from "../../translations/vi.js"
 
 export interface MailAddressAndName {
 	name: string
@@ -104,7 +102,12 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 	}
 
 	private renderAddressesAndDate(viewModel: MailViewerViewModel, attrs: MailViewerHeaderAttrs, dateTime: string, dateTimeFull: string) {
-		return m(".flex.plr-l.mt-xs", [
+		return m(".flex.plr-l.mt-xs.click", {
+			"aria-pressed": String(this.detailsExpanded),
+			onclick: () => {
+				this.detailsExpanded = !this.detailsExpanded
+			}
+		}, [
 			m(".flex.col", [
 				m(".small", getSenderHeading(viewModel.mail, false)),
 				m(".flex", this.getRecipientEmailAddress(attrs)),
@@ -363,29 +366,37 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			attachments.forEach(attachment => totalAttachmentSize += Number(attachment.size))
 
 			return [
-				m(".flex.ml-between-s", [
+				m(".flex", [
 					attachmentCount === 1
 						// If we have exactly one attachment, just show the attachment
 						? this.renderAttachmentContainer(viewModel, attachments)
 
 						// Otherwise, we show the number of attachments and its total size along with a show all button
 						: [
-							m(".flex.center-vertically.pl-s", [
-									lang.get("attachmentAmount_label", {"{amount}": attachmentCount + ""}) + ` (${formatStorageSize(totalAttachmentSize)})`
+							m(".flex.center-vertically.click.flex-grow.ml-between-s.mt-xs", {
+									onclick: () => this.filesExpanded = !this.filesExpanded
+								}, [
+									m("", lang.get("attachmentAmount_label", {"{amount}": attachmentCount + ""}) + ` (${formatStorageSize(totalAttachmentSize)})`),
+									m(Icon, {
+										icon: BootIcons.Expand,
+										style: {
+											fill: theme.content_fg,
+											transform: this.filesExpanded ? "rotate(180deg)" : ""
+										},
+									})
 								]
 							),
-							m(ToggleButton, {
-								icon: BootIcons.Expand,
-								title: "showAll_action",
-								selected: this.filesExpanded,
-								onSelected: (expanded) => this.filesExpanded = expanded
-							}),
-							m(".flex-grow"),
-							m(IconButton, {
-								icon: Icons.Download,
-								title: "saveAll_action",
-								click: () => viewModel.downloadAll(),
-							}),
+							// m(ToggleButton, {
+							// 	icon: BootIcons.Expand,
+							// 	title: "showAll_action",
+							// 	selected: this.filesExpanded,
+							// 	onSelected: (expanded) => this.filesExpanded = expanded
+							// }),
+							// m(IconButton, {
+							// 	icon: Icons.Download,
+							// 	title: "saveAll_action",
+							// 	click: () => viewModel.downloadAll(),
+							// }),
 						],
 				]),
 
@@ -807,12 +818,12 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		const allRecipients = mail.toRecipients.concat(mail.ccRecipients).concat(mail.bccRecipients)
 
 		if (allRecipients.length > 0) {
-			return m(".flex.click.small.ml-between-s.state-bg.border-radius.plr-s.ml-negative-s", {
-				toggled: String(this.detailsExpanded),
-				"aria-pressed": String(this.detailsExpanded),
-				onclick: () => {
-					this.detailsExpanded = !this.detailsExpanded
-				}
+			return m(".flex.click.small.ml-between-s.border-radius.plr-s.ml-negative-s", {
+				// toggled: String(this.detailsExpanded),
+				// "aria-pressed": String(this.detailsExpanded),
+				// onclick: () => {
+				// 	this.detailsExpanded = !this.detailsExpanded
+				// }
 			}, [
 				m("", "to:"),
 				m(".text-ellipsis", allRecipients[0].address),
@@ -821,7 +832,10 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 						m(Icon, {
 							icon: BootIcons.Expand,
 							container: "div",
-							style: {fill: theme.content_fg},
+							style: {
+								fill: theme.content_fg,
+								transform: this.detailsExpanded ? "rotate(180deg)" : ""
+							},
 						})
 					],
 				)

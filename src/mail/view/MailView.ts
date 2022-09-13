@@ -1,4 +1,4 @@
-import m, {Children} from "mithril"
+import m, {Children, Component} from "mithril"
 import {ViewSlider} from "../../gui/nav/ViewSlider.js"
 import {ColumnType, ViewColumn} from "../../gui/base/ViewColumn"
 import type {TranslationKey} from "../../misc/LanguageViewModel"
@@ -6,7 +6,7 @@ import {lang} from "../../misc/LanguageViewModel"
 import type {ButtonAttrs} from "../../gui/base/Button.js"
 import {Button, ButtonColor, ButtonType} from "../../gui/base/Button.js"
 import type {NavButtonAttrs} from "../../gui/base/NavButton.js"
-import {isNavButtonSelected, isSelectedPrefix, NavButtonColor} from "../../gui/base/NavButton.js"
+import {isSelectedPrefix, NavButtonColor} from "../../gui/base/NavButton.js"
 import {createMailViewerViewModel, MailViewer} from "./MailViewer"
 import {Dialog} from "../../gui/base/Dialog"
 import {FeatureType, Keys, MailFolderType, OperationType} from "../../api/common/TutanotaConstants"
@@ -45,7 +45,7 @@ import type {EntityUpdateData} from "../../api/main/EventController"
 import {isUpdateForTypeRef} from "../../api/main/EventController"
 import {PermissionError} from "../../api/common/error/PermissionError"
 import {MAIL_PREFIX, navButtonRoutes, throttleRoute} from "../../misc/RouteChange"
-import {attachDropdown, DomRectReadOnlyPolyfilled, Dropdown} from "../../gui/base/Dropdown.js"
+import {attachDropdown, createDropdown, DomRectReadOnlyPolyfilled, Dropdown, DropdownButtonAttrs} from "../../gui/base/Dropdown.js"
 import {MailFolderRow} from "./MailFolderRow"
 import {styles} from "../../gui/styles"
 import {px, size} from "../../gui/size"
@@ -794,68 +794,101 @@ export class MailView implements CurrentView {
 				this.mailViewerViewModel.updateMail(viewModelParams)
 			} else {
 				this.mailViewerViewModel = createMailViewerViewModel(viewModelParams)
+				let dom: HTMLElement | null = null
+				const barComponent: Component = {
+					view: (vnode) => {
+						const viewModel = this.mailViewerViewModel
+						if (viewModel == null) return
+						// FIXME: this is a placeholder. We need to somehow extract the logic for what can be shown.
+						const actions: Children[] = []
+						actions.push(m(IconButton, {
+							title: "reply_action",
+							click: this.mailViewerViewModel?.canReplyAll()
+								? createDropdown({
+									lazyButtons: () => {
+										const buttons: DropdownButtonAttrs[] = []
+										buttons.push({
+											label: "replyAll_action",
+											icon: Icons.ReplyAll,
+											// FIXME
+											click: () => viewModel.reply(true)
+										})
+
+										buttons.push({
+											label: "reply_action",
+											icon: Icons.Reply,
+											click: () => viewModel.reply(false),
+										})
+										return buttons
+									},
+									overrideOrigin: (original) => {
+										console.log("override origin, dom", dom)
+										return dom?.getBoundingClientRect() ?? original
+									},
+								})
+								: () => viewModel.reply(false),
+							icon: this.mailViewerViewModel?.canReplyAll() ? Icons.ReplyAll : Icons.Reply,
+						}))
+
+
+						actions.push(
+							m(IconButton, {
+								title: "forward_action",
+								click: () => viewModel.forward()
+													  .catch(ofClass(UserError, showUserError)),
+								icon: Icons.Forward,
+							}),
+						)
+
+						actions.push(
+							m(IconButton, {
+								title: "delete_action",
+								click: () => promptAndDeleteMails(viewModel.mailModel, [viewModel.mail], noOp),
+								icon: Icons.Trash,
+							}),
+						)
+
+						actions.push(
+							m(IconButton, {
+								title: "move_action",
+								click: noOp,
+								icon: Icons.Folder,
+							}),
+						)
+
+						actions.push(
+							m(IconButton, {
+								title: "more_label",
+								click: noOp,
+								icon: Icons.More,
+							}),
+						)
+
+						return m(".bottom-action-bar.flex.items-center.mlr-l", {
+							oncreate: (vnode) => {
+								console.log("action bar created??", vnode.dom)
+								dom = vnode.dom as HTMLElement
+							},
+							style: {
+								justifyContent: "space-between",
+								height: px(size.bottom_nav_bar)
+							}
+						}, [
+							actions,
+						])
+					}
+				}
 				displayOverlay(
 					() => {
+						const height = this.viewSlider.focusedColumn === this.viewSlider.columns[2] ? px(size.bottom_nav_bar) : "0"
 						return {
 							bottom: "0",
 							left: "0",
 							right: "0",
-							height: px(size.bottom_nav_bar),
+							height,
 						}
 					},
-					{
-						view(vnode): Children {
-							// FIXME: placeholder
-							const actions: Children[] = []
-							actions.push(m(IconButton, {
-								title: "reply_action",
-								click: noOp,
-								icon: Icons.Reply,
-							}))
-
-
-							actions.push(
-								m(IconButton, {
-									title: "forward_action",
-									click: noOp,
-									icon: Icons.Forward,
-								}),
-							)
-
-							actions.push(
-								m(IconButton, {
-									title: "delete_action",
-									click: noOp,
-									icon: Icons.Trash,
-								}),
-							)
-
-							actions.push(
-								m(IconButton, {
-									title: "move_action",
-									click: noOp,
-									icon: Icons.Folder,
-								}),
-							)
-
-							actions.push(
-								m(IconButton, {
-									title: "more_label",
-									click: noOp,
-									icon: Icons.More,
-								}),
-							)
-
-							return m(".bottom-action-bar.flex.items-center", {
-								style: {
-									justifyContent: "space-around",
-									height: px(size.bottom_nav_bar)
-								}
-							}, [
-								actions,
-							])
-						}
-					},
+					barComponent,
 					undefined,
 					undefined,
 					""
