@@ -1,15 +1,6 @@
 import m, {Children, Component, Vnode} from "mithril"
 import {InfoLink, lang} from "../../misc/LanguageViewModel.js"
-import {
-	allMailsAllowedInsideFolder,
-	getDisplayText,
-	getFolderIcon,
-	getFolderName,
-	getSenderHeading,
-	getSortedCustomFolders,
-	getSortedSystemFolders,
-	isTutanotaTeamMail
-} from "../model/MailUtils.js"
+import {getDisplayText, getSenderHeading, isTutanotaTeamMail} from "../model/MailUtils.js"
 import {theme} from "../../gui/theme.js"
 import {styles} from "../../gui/styles.js"
 import {ExpanderPanel} from "../../gui/base/Expander.js"
@@ -31,8 +22,7 @@ import {ContentBlockingStatus, MailViewerViewModel} from "./MailViewerViewModel.
 import {createMoreSecondaryButtonAttrs} from "../../gui/base/GuiUtils.js"
 import {isNotNull, neverNull, noOp, ofClass} from "@tutao/tutanota-utils"
 import {IconButton} from "../../gui/base/IconButton.js"
-import {listIdPart} from "../../api/common/utils/EntityUtils.js"
-import {moveMails, promptAndDeleteMails} from "./MailGuiUtils.js"
+import {promptAndDeleteMails, showMoveMailsDropdown} from "./MailGuiUtils.js"
 import {UserError} from "../../api/main/UserError.js"
 import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {BootIcons} from "../../gui/base/icons/BootIcons.js"
@@ -585,7 +575,15 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		// actions.push(this.renderAttachments(attrs.viewModel))
 		// actions.push(m(".flex-grow"))
 
-		const colors = ButtonColor.Content
+		const moveButton = m(IconButton, {
+			title: "move_action",
+			icon: Icons.Folder,
+			click: (e, dom) => showMoveMailsDropdown(
+				viewModel.mailModel,
+				dom.getBoundingClientRect(),
+				[viewModel.mail],
+			),
+		})
 
 		const separator = m("", {
 			style: {
@@ -596,32 +594,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			}
 		})
 
-		const moveButton = m(IconButton, {
-			title: "move_action",
-			icon: Icons.Folder,
-			colors,
-			click: createAsyncDropdown({
-					lazyButtons: () => {
-						return viewModel.mailModel.getMailboxFolders(viewModel.mail).then(folders => {
-								const filteredFolders = folders.filter(f => f.mails !== listIdPart(viewModel.getMailId()))
-								const targetFolders = getSortedSystemFolders(filteredFolders).concat(getSortedCustomFolders(filteredFolders))
-								return targetFolders.filter(f => allMailsAllowedInsideFolder([viewModel.mail], f)).map(f => {
-									return {
-										label: () => getFolderName(f),
-										click: () => moveMails({
-											mailModel: viewModel.mailModel,
-											mails: [viewModel.mail],
-											targetMailFolder: f
-										}),
-										icon: getFolderIcon(f)(),
-									}
-								})
-							}
-						)
-					}
-				},
-			),
-		})
 
 		if (viewModel.isDraftMail()) {
 			actions.push(
@@ -629,7 +601,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					title: "edit_action",
 					click: () => attrs.onEditDraft(),
 					icon: Icons.Edit,
-					colors,
 				}),
 			)
 			actions.push(moveButton)
@@ -640,7 +611,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 						title: "reply_action",
 						click: () => viewModel.reply(false),
 						icon: Icons.Reply,
-						colors,
 					}),
 				)
 
@@ -650,7 +620,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							title: "replyAll_action",
 							click: () => viewModel.reply(true),
 							icon: Icons.ReplyAll,
-							colors,
 						}),
 					)
 				}
@@ -662,7 +631,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							click: () => viewModel.forward()
 												  .catch(ofClass(UserError, showUserError)),
 							icon: Icons.Forward,
-							colors,
 						}),
 					)
 					// FIXME
@@ -681,7 +649,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					promptAndDeleteMails(viewModel.mailModel, [viewModel.mail], noOp)
 				},
 				icon: Icons.Trash,
-				colors,
 			}),
 		)
 
@@ -690,7 +657,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 				m(IconButton, {
 					title: "more_label",
 					icon: Icons.More,
-					colors,
 					click: this.prepareMoreActions(attrs),
 				}),
 			)

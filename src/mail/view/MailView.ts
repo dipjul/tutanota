@@ -1,4 +1,4 @@
-import m, {Children, Component} from "mithril"
+import m, {Children} from "mithril"
 import {ViewSlider} from "../../gui/nav/ViewSlider.js"
 import {ColumnType, ViewColumn} from "../../gui/base/ViewColumn"
 import type {TranslationKey} from "../../misc/LanguageViewModel"
@@ -27,7 +27,6 @@ import {showProgressDialog} from "../../gui/dialogs/ProgressDialog"
 import {
 	allMailsAllowedInsideFolder,
 	canDoDragAndDropExport,
-	emptyOrContainsDraftsAndNonDrafts,
 	getFolder,
 	getFolderIcon,
 	getFolderName,
@@ -45,16 +44,15 @@ import type {EntityUpdateData} from "../../api/main/EventController"
 import {isUpdateForTypeRef} from "../../api/main/EventController"
 import {PermissionError} from "../../api/common/error/PermissionError"
 import {MAIL_PREFIX, navButtonRoutes, throttleRoute} from "../../misc/RouteChange"
-import {attachDropdown, createDropdown, DomRectReadOnlyPolyfilled, Dropdown, DropdownButtonAttrs} from "../../gui/base/Dropdown.js"
+import {attachDropdown} from "../../gui/base/Dropdown.js"
 import {MailFolderRow} from "./MailFolderRow"
 import {styles} from "../../gui/styles"
-import {px, size} from "../../gui/size"
+import {size} from "../../gui/size"
 import {FolderColumnView} from "../../gui/FolderColumnView.js"
-import {modal} from "../../gui/base/Modal"
 import {UserError} from "../../api/main/UserError"
 import {showUserError} from "../../misc/ErrorHandlerImpl"
-import {archiveMails, moveMails, moveToInbox, promptAndDeleteMails} from "./MailGuiUtils"
-import {getListId, isSameId} from "../../api/common/utils/EntityUtils"
+import {archiveMails, moveMails, moveToInbox, promptAndDeleteMails, showMoveMailsDropdown} from "./MailGuiUtils"
+import {isSameId} from "../../api/common/utils/EntityUtils"
 import {isNewMailActionAvailable} from "../../gui/nav/NavFunctions"
 import {SidebarSection} from "../../gui/SidebarSection"
 import {CancelledError} from "../../api/common/error/CancelledError"
@@ -63,7 +61,8 @@ import {MailViewerViewModel} from "./MailViewerViewModel"
 import {readLocalFiles} from "../../file/FileController.js"
 import {IconButton, IconButtonAttrs} from "../../gui/base/IconButton.js"
 import {ButtonSize} from "../../gui/base/ButtonSize.js"
-import {displayOverlay} from "../../gui/base/Overlay.js"
+import {BottomNav} from "../../gui/nav/BottomNav.js"
+import {MobileMailActionBar} from "./MobileMailActionBar.js"
 
 assertMainOrNode()
 
@@ -201,7 +200,7 @@ export class MailView implements CurrentView {
 			mailColumnTitle,
 			() => lang.get("email_label") + " " + mailColumnTitle(),
 		)
-		this.viewSlider = new ViewSlider(header, [this.folderColumn, this.listColumn, this.mailColumn], "MailView")
+		this.viewSlider = new ViewSlider([this.folderColumn, this.listColumn, this.mailColumn], "MailView")
 
 		this.view = (): Children => {
 			return m(
@@ -239,7 +238,12 @@ export class MailView implements CurrentView {
 						ev.preventDefault()
 					},
 				},
-				m(this.viewSlider),
+				m(this.viewSlider, {
+					header: m(header),
+					bottomNav: styles.isSingleColumnLayout() && this.viewSlider.focusedColumn === this.mailColumn ?
+						this.renderMobileMailActionBar() :
+						m(BottomNav),
+				}),
 			)
 		}
 
@@ -352,7 +356,8 @@ export class MailView implements CurrentView {
 			{
 				key: Keys.V,
 				exec: () => {
-					return this.moveMails()
+					this.moveMails()
+					return true
 				},
 				help: "move_action",
 			},
@@ -435,44 +440,20 @@ export class MailView implements CurrentView {
 		]
 	}
 
-	private moveMails(): boolean {
+	private moveMails() {
 		const mailList = this.mailList
 		if (mailList == null) {
-			return false
+			return
 		}
 
 		const selectedMails = mailList.list.getSelectedEntities()
-		if (emptyOrContainsDraftsAndNonDrafts(selectedMails)) { // do not move mails if no mails or mails cannot be moved together
-			return false
-		}
 
-		locator.mailModel.getMailboxFolders(selectedMails[0]).then(folders => {
-			let dropdown = new Dropdown(() => {
-				const mailList = getListId(selectedMails[0])
-
-				if (selectedMails.some(m => !isSameId(getListId(m), mailList))) {
-					return []
-				}
-
-				const filteredFolders = folders.filter(f => f.mails !== mailList)
-				return getSortedSystemFolders(filteredFolders)
-					.concat(getSortedCustomFolders(filteredFolders))
-					.filter(folder => allMailsAllowedInsideFolder(selectedMails, folder))
-					.map(f => ({
-						label: () => getFolderName(f),
-						click: () => moveMails({mailModel: locator.mailModel, mails: selectedMails, targetMailFolder: f}),
-						icon: getFolderIcon(f)(),
-						size: ButtonSize.Compact,
-					}))
-			}, 300)
-
-			// Render the dropdown at the position of the selected mails in the MailList
-			const bounds = mailList.list.getSelectionBounds()
-			const origin = new DomRectReadOnlyPolyfilled(bounds.left, bounds.top, bounds.width, 0)
-			dropdown.setOrigin(origin)
-			modal.displayUnique(dropdown)
-		})
-		return false
+		// Render the dropdown at the position of the selected mails in the MailList
+		showMoveMailsDropdown(
+			locator.mailModel,
+			mailList.list.getSelectionBounds(),
+			selectedMails
+		)
 	}
 
 	private async switchToFolder(folderType: MailFolderType): Promise<void> {
@@ -794,105 +775,6 @@ export class MailView implements CurrentView {
 				this.mailViewerViewModel.updateMail(viewModelParams)
 			} else {
 				this.mailViewerViewModel = createMailViewerViewModel(viewModelParams)
-				let dom: HTMLElement | null = null
-				const barComponent: Component = {
-					view: (vnode) => {
-						const viewModel = this.mailViewerViewModel
-						if (viewModel == null) return
-						// FIXME: this is a placeholder. We need to somehow extract the logic for what can be shown.
-						const actions: Children[] = []
-						actions.push(m(IconButton, {
-							title: "reply_action",
-							click: this.mailViewerViewModel?.canReplyAll()
-								? createDropdown({
-									lazyButtons: () => {
-										const buttons: DropdownButtonAttrs[] = []
-										buttons.push({
-											label: "replyAll_action",
-											icon: Icons.ReplyAll,
-											// FIXME
-											click: () => viewModel.reply(true)
-										})
-
-										buttons.push({
-											label: "reply_action",
-											icon: Icons.Reply,
-											click: () => viewModel.reply(false),
-										})
-										return buttons
-									},
-									overrideOrigin: (original) => {
-										console.log("override origin, dom", dom)
-										return dom?.getBoundingClientRect() ?? original
-									},
-								})
-								: () => viewModel.reply(false),
-							icon: this.mailViewerViewModel?.canReplyAll() ? Icons.ReplyAll : Icons.Reply,
-						}))
-
-
-						actions.push(
-							m(IconButton, {
-								title: "forward_action",
-								click: () => viewModel.forward()
-													  .catch(ofClass(UserError, showUserError)),
-								icon: Icons.Forward,
-							}),
-						)
-
-						actions.push(
-							m(IconButton, {
-								title: "delete_action",
-								click: () => promptAndDeleteMails(viewModel.mailModel, [viewModel.mail], noOp),
-								icon: Icons.Trash,
-							}),
-						)
-
-						actions.push(
-							m(IconButton, {
-								title: "move_action",
-								click: noOp,
-								icon: Icons.Folder,
-							}),
-						)
-
-						actions.push(
-							m(IconButton, {
-								title: "more_label",
-								click: noOp,
-								icon: Icons.More,
-							}),
-						)
-
-						return m(".bottom-action-bar.flex.items-center.mlr-l", {
-							oncreate: (vnode) => {
-								console.log("action bar created??", vnode.dom)
-								dom = vnode.dom as HTMLElement
-							},
-							style: {
-								justifyContent: "space-between",
-								height: px(size.bottom_nav_bar)
-							}
-						}, [
-							actions,
-						])
-					}
-				}
-				displayOverlay(
-					() => {
-						const height = this.viewSlider.focusedColumn === this.viewSlider.columns[2] ? px(size.bottom_nav_bar) : "0"
-						return {
-							bottom: "0",
-							left: "0",
-							right: "0",
-							height,
-						}
-					},
-					barComponent,
-					undefined,
-					undefined,
-					""
-				)
 			}
 
 			const url = `/mail/${mails[0]._id.join("/")}`
@@ -933,6 +815,12 @@ export class MailView implements CurrentView {
 			}
 		}
 		animationOverDeferred.resolve()
+	}
+
+	private renderMobileMailActionBar(): Children {
+		return this.mailViewerViewModel
+			? m(MobileMailActionBar, {viewModel: this.mailViewerViewModel})
+			: null
 	}
 
 	private async toggleUnreadMails(mails: Mail[]): Promise<void> {

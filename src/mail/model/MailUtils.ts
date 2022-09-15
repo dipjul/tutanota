@@ -11,7 +11,7 @@ import {
 	ReplyType,
 	TUTANOTA_MAIL_ADDRESS_DOMAINS,
 } from "../../api/common/TutanotaConstants"
-import {assertNotNull, contains, endsWith, neverNull, noOp, ofClass} from "@tutao/tutanota-utils"
+import {assertNotNull, contains, endsWith, first, neverNull, noOp, ofClass} from "@tutao/tutanota-utils"
 import {assertMainOrNode, isDesktop} from "../../api/common/Env"
 import {LockedError, NotFoundError} from "../../api/common/error/RestError"
 import type {LoginController} from "../../api/main/LoginController"
@@ -20,6 +20,7 @@ import type {Language, TranslationKey} from "../../misc/LanguageViewModel"
 import {lang} from "../../misc/LanguageViewModel"
 import {Icons} from "../../gui/base/icons/Icons"
 import type {MailboxDetail} from "./MailModel"
+import {MailModel} from "./MailModel"
 import type {lazyIcon} from "../../gui/base/Icon"
 import type {GroupInfo, User} from "../../api/entities/sys/TypeRefs.js"
 import {CustomerPropertiesTypeRef} from "../../api/entities/sys/TypeRefs.js"
@@ -28,6 +29,7 @@ import type {EntityClient} from "../../api/common/EntityClient"
 import {getEnabledMailAddressesForGroupInfo, getGroupInfoDisplayName} from "../../api/common/utils/GroupUtils"
 import {fullNameToFirstAndLastName, mailAddressToFirstAndLastName} from "../../misc/parsing/MailAddressParser"
 import type {Attachment} from "../editor/SendMailModel"
+import {getListId} from "../../api/common/utils/EntityUtils.js"
 
 assertMainOrNode()
 export const LINE_BREAK = "<br>"
@@ -429,4 +431,14 @@ export enum RecipientField {
 	TO = "to",
 	CC = "cc",
 	BCC = "bcc",
+}
+
+export async function getMoveTargetFolders(model: MailModel, mails: Mail[]): Promise<MailFolder[]> {
+	const firstMail = first(mails)
+	if (firstMail == null) return []
+
+	const folders = await model.getMailboxFolders(firstMail)
+	const filteredFolders = folders.filter(f => f.mails !== getListId(firstMail))
+	const targetFolders = getSortedSystemFolders(filteredFolders).concat(getSortedCustomFolders(filteredFolders))
+	return targetFolders.filter(f => allMailsAllowedInsideFolder([firstMail], f))
 }

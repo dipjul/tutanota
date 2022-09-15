@@ -175,15 +175,15 @@ export class MailViewer implements Component<MailViewerAttrs> {
 	}
 
 	view(vnode: Vnode<MailViewerAttrs>): Children {
-
+		const scrollingHeader = styles.isSingleColumnLayout()
 		return [
 			m(
-				"#mail-viewer.fill-absolute" + (client.isMobileDevice() ? ".scroll-no-overlay.overflow-x-hidden" : ".flex.flex-column"),
+				"#mail-viewer.fill-absolute" + (scrollingHeader ? ".scroll-no-overlay.overflow-x-hidden" : ".flex.flex-column"),
 				[
 					this.renderMailHeader(),
 					m(
 						".flex-grow.mlr-safe-inset.scroll-x.plr-l.pb-floating.pt" +
-						(client.isMobileDevice() ? "" : ".scroll-no-overlay") +
+						(scrollingHeader ? "" : ".scroll-no-overlay") +
 						(this.viewModel.isContrastFixNeeded() ? ".bg-white.content-black" : " "),
 						{
 							oncreate: (vnode) => {

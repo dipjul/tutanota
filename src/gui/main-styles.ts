@@ -4,7 +4,7 @@ import {client} from "../misc/ClientDetector"
 import {lang} from "../misc/LanguageViewModel"
 import {noselect, position_absolute, positionValue} from "./mixins"
 import {assertMainOrNodeBoot, isAdminClient, isApp, isElectronClient} from "../api/common/Env"
-import {getContentButtonIconBackground, getElevatedBackground, getNavigationMenuBg, theme} from "./theme"
+import {getElevatedBackground, getNavigationMenuBg, theme} from "./theme"
 import {BrowserType} from "../misc/ClientConstants"
 
 assertMainOrNodeBoot()
@@ -1101,12 +1101,9 @@ styles.registerStyle("main", () => {
 			// box_shadow will be overruled by the views background, otherwise
 			"margin-top": "env(safe-area-inset-top)", // insets for iPhone X
 		},
-		"bottom-nav": {
+		"bottom-nav, .bottom-nav": {
 			"box-shadow": `0 -2px 4px 0 ${theme.header_box_shadow_bg}`,
 			height: positionValue(size.bottom_nav_bar),
-			left: 0,
-			right: 0,
-			bottom: 0,
 			background: theme.header_bg,
 			"margin-bottom": "env(safe-area-inset-bottom)",
 		},
