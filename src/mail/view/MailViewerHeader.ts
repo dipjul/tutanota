@@ -22,11 +22,10 @@ import {ContentBlockingStatus, MailViewerViewModel} from "./MailViewerViewModel.
 import {createMoreSecondaryButtonAttrs} from "../../gui/base/GuiUtils.js"
 import {isNotNull, neverNull, noOp, ofClass} from "@tutao/tutanota-utils"
 import {IconButton} from "../../gui/base/IconButton.js"
-import {promptAndDeleteMails, showMoveMailsDropdown} from "./MailGuiUtils.js"
+import {mailViewerMoreActions, promptAndDeleteMails, showMoveMailsDropdown} from "./MailGuiUtils.js"
 import {UserError} from "../../api/main/UserError.js"
 import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {BootIcons} from "../../gui/base/icons/BootIcons.js"
-import {client} from "../../misc/ClientDetector.js"
 
 export interface MailAddressAndName {
 	name: string
@@ -46,9 +45,7 @@ export interface MailViewerHeaderAttrs {
 	onSetContentBlockingStatus: (status: ContentBlockingStatus) => unknown
 	createMailAddressContextButtons: MailAddressDropdownCreator
 	onEditDraft: () => unknown
-	onUnsubscribe: () => unknown,
 	onShowHeaders: () => unknown,
-	onReportMail: () => unknown,
 }
 
 /** The upper part of the mail viewer, everything but the mail body itself. */
@@ -692,90 +689,12 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 	private prepareMoreActions({
 								   viewModel,
 								   onSetContentBlockingStatus,
-								   onUnsubscribe,
 								   onShowHeaders,
-								   onReportMail,
 							   }: MailViewerHeaderAttrs
 	) {
 		return createDropdown({
-			lazyButtons: () => {
-				const moreButtons: Array<DropdownButtonAttrs> = []
-				if (viewModel.isUnread()) {
-					moreButtons.push({
-						label: "markRead_action",
-						click: () => viewModel.setUnread(false),
-						icon: Icons.Eye,
-					})
-				} else {
-					moreButtons.push({
-						label: "markUnread_action",
-						click: () => viewModel.setUnread(true),
-						icon: Icons.NoEye,
-					})
-				}
-
-				if (!client.isMobileDevice() && viewModel.canExport()) {
-					moreButtons.push({
-						label: "export_action",
-						click: () => showProgressDialog("pleaseWait_msg", viewModel.exportMail()),
-						icon: Icons.Export,
-					})
-				}
-
-				if (!client.isMobileDevice() && typeof window.print === "function" && viewModel.canPrint()) {
-					moreButtons.push({
-						label: "print_action",
-						click: () => window.print(),
-						icon: Icons.Print,
-					})
-				}
-
-				if (viewModel.isListUnsubscribe()) {
-					moreButtons.push({
-						label: "unsubscribe_action",
-						click: () => onUnsubscribe(),
-						icon: Icons.Cancel,
-					})
-				}
-
-				if (viewModel.canShowHeaders()) {
-					moreButtons.push({
-						label: "showHeaders_action",
-						click: () => onShowHeaders(),
-						icon: Icons.ListUnordered,
-					})
-				}
-
-				if (viewModel.canReport()) {
-					moreButtons.push({
-						label: "reportEmail_action",
-						click: () => onReportMail(),
-						icon: Icons.Warning,
-					})
-				}
-
-				if (viewModel.canPersistBlockingStatus() && viewModel.isShowingExternalContent()) {
-					moreButtons.push({
-						label: "disallowExternalContent_action",
-						click: async () => {
-							await onSetContentBlockingStatus(ContentBlockingStatus.Block)
-						},
-						icon: Icons.Picture,
-					})
-				}
-
-				if (viewModel.canPersistBlockingStatus() && viewModel.isBlockingExternalImages()) {
-					moreButtons.push({
-						label: "showImages_action",
-						click: async () => {
-							await onSetContentBlockingStatus(ContentBlockingStatus.Show)
-						},
-						icon: Icons.Picture,
-					})
-				}
-
-				return moreButtons
-			}, width: 300
+			lazyButtons: () => mailViewerMoreActions(viewModel, onShowHeaders, onSetContentBlockingStatus),
+			width: 300
 		})
 	}
 
@@ -810,5 +729,4 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			return ""
 		}
 	}
-
 }

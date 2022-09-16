@@ -203,9 +203,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 			createMailAddressContextButtons: this.createMailAddressContextButtons.bind(this),
 			onSetContentBlockingStatus: (status) => this.setContentBlockingStatus(status),
 			onEditDraft: () => this.editDraft(),
-			onReportMail: () => this.reportMail(),
 			onShowHeaders: () => this.showHeaders(),
-			onUnsubscribe: () => this.unsubscribe(),
 		})
 	}
 
@@ -384,98 +382,6 @@ export class MailViewer implements Component<MailViewerAttrs> {
 					coords.y,
 				)
 			}
-		})
-	}
-
-	private unsubscribe(): Promise<void> {
-		return showProgressDialog("pleaseWait_msg", this.viewModel.unsubscribe())
-			.then(success => {
-				if (success) {
-					return Dialog.message("unsubscribeSuccessful_msg")
-				}
-			})
-			.catch(e => {
-				if (e instanceof LockedError) {
-					return Dialog.message("operationStillActive_msg")
-				} else {
-					return Dialog.message("unsubscribeFailed_msg")
-				}
-			})
-	}
-
-	private prepareMoveMailAction() {
-		return createAsyncDropdown({
-				lazyButtons: () =>
-					this.viewModel.mailModel.getMailboxFolders(this.viewModel.mail).then(folders => {
-						const filteredFolders = folders.filter(f => f.mails !== this.viewModel.getMailId()[0])
-						const targetFolders = getSortedSystemFolders(filteredFolders).concat(getSortedCustomFolders(filteredFolders))
-						return targetFolders.map(f => {
-							return {
-								label: () => getFolderName(f),
-								click: () => moveMails({
-									mailModel: this.viewModel.mailModel,
-									mails: [this.viewModel.mail],
-									targetMailFolder: f
-								}),
-								icon: getFolderIcon(f)(),
-							}
-						})
-					})
-			},
-		)
-	}
-
-	private reportMail() {
-		const sendReport = (reportType: MailReportType) => {
-			this.viewModel.reportMail(reportType)
-				.catch(ofClass(LockedError, () => Dialog.message("operationStillActive_msg")))
-				.finally(m.redraw)
-		}
-
-		const dialog = Dialog.showActionDialog({
-			title: lang.get("reportEmail_action"),
-			child: () =>
-				m(
-					".flex.col.mt-m",
-					{
-						// So that space below buttons doesn't look huge
-						style: {
-							marginBottom: "-10px",
-						},
-					},
-					[
-						m("div", lang.get("phishingReport_msg")),
-						ifAllowedTutanotaLinks(InfoLink.Phishing, link =>
-							m(
-								"a.mt-s",
-								{
-									href: link,
-									target: "_blank",
-								},
-								lang.get("whatIsPhishing_msg"),
-							),
-						),
-						m(".flex-wrap.flex-end", [
-							m(Button, {
-								label: "reportPhishing_action",
-								click: () => {
-									sendReport(MailReportType.PHISHING)
-									dialog.close()
-								},
-								type: ButtonType.Secondary,
-							}),
-							m(Button, {
-								label: "reportSpam_action",
-								click: () => {
-									sendReport(MailReportType.SPAM)
-									dialog.close()
-								},
-								type: ButtonType.Secondary,
-							}),
-						]),
-					],
-				),
-			okAction: null,
 		})
 	}
 
@@ -706,6 +612,9 @@ export class MailViewer implements Component<MailViewerAttrs> {
 		await this.viewModel.setContentBlockingStatus(status)
 		// Wait for new mail body to be rendered before replacing images
 		m.redraw.sync()
+		// FIXME this is not an optimal location for what we want to do. This assumes that the content blocking status can only be changed from inside of
+		//  this class and we want to trigger it from the action bar. It would be better if we could detect that the change has happened (e.g. in the view())
+		//  and just schedule replacement after Promise.resolve() or raf()
 		await this.replaceInlineImages()
 	}
 

@@ -1,12 +1,13 @@
 import m, {Children, Component, Vnode} from "mithril"
 import {MailViewerViewModel} from "./MailViewerViewModel.js"
 import {IconButton} from "../../gui/base/IconButton.js"
-import {createDropdown, DROPDOWN_MARGIN, DropdownButtonAttrs} from "../../gui/base/Dropdown.js"
+import {createAsyncDropdown, createDropdown, Dropdown, DROPDOWN_MARGIN, DropdownButtonAttrs} from "../../gui/base/Dropdown.js"
 import {Icons} from "../../gui/base/icons/Icons.js"
 import {UserError} from "../../api/main/UserError.js"
 import {showUserError} from "../../misc/ErrorHandlerImpl.js"
-import {promptAndDeleteMails} from "./MailGuiUtils.js"
+import {mailViewerMoreActions, promptAndDeleteMails, showMoveMailsDropdown} from "./MailGuiUtils.js"
 import {noOp, ofClass} from "@tutao/tutanota-utils"
+import {modal} from "../../gui/base/Modal.js"
 
 export interface MobileMailActionBarAttrs {
 	viewModel: MailViewerViewModel,
@@ -16,14 +17,116 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 	private dom: HTMLElement | null = null
 
 	view(vnode: Vnode<MobileMailActionBarAttrs>): Children {
-		const {viewModel} = vnode.attrs
-		// FIXME: this is a placeholder. We need to somehow extract the logic for what can be shown.
-		const actions: Children[] = []
-		actions.push(m(IconButton, {
+		const {attrs} = vnode
+		const {viewModel} = attrs
+		let actions: Children[]
+
+		if (viewModel.isAnnouncement()) {
+			actions = [
+				this.placeholder(),
+				this.placeholder(),
+				this.deleteButton(attrs),
+				this.placeholder(),
+				this.moreButton(attrs),
+			]
+		} else if (viewModel.isDraftMail()) {
+			actions = [
+				this.editButton(attrs),
+				this.placeholder(),
+				this.deleteButton(attrs),
+				this.placeholder(),
+				this.placeholder(),
+			]
+		} else if (viewModel.canForwardOrMove()) {
+			actions = [
+				this.replyButton(attrs),
+				this.forwardButton(attrs),
+				this.deleteButton(attrs),
+				this.moveButton(attrs),
+				this.moreButton(attrs),
+			]
+		} else {
+			actions = [
+				this.placeholder(),
+				this.placeholder(),
+				this.deleteButton(attrs),
+				this.moveButton(attrs),
+				this.moreButton(attrs),
+			]
+		}
+
+		return m(".bottom-nav.bottom-action-bar.flex.items-center.plr-l", {
+			oncreate: (vnode) => {
+				console.log("action bar created??", vnode.dom)
+				this.dom = vnode.dom as HTMLElement
+			},
+			style: {
+				justifyContent: "space-between",
+			}
+		}, [
+			actions,
+		])
+
+	}
+
+	private placeholder() {
+		// FIXME
+		return m("")
+	}
+
+	private moveButton({viewModel}: MobileMailActionBarAttrs) {
+		return m(IconButton, {
+			title: "move_action",
+			click: (e, dom) => showMoveMailsDropdown(
+				viewModel.mailModel,
+				dom.getBoundingClientRect(),
+				[viewModel.mail],
+				this.dropdownWidth(),
+			),
+			icon: Icons.Folder,
+		})
+	}
+
+	private dropdownWidth() {
+		return this.dom?.offsetWidth ? this.dom.offsetWidth - DROPDOWN_MARGIN * 2 : undefined
+	}
+
+	private moreButton({viewModel}: MobileMailActionBarAttrs) {
+		return m(IconButton, {
+			title: "more_label",
+			click: createDropdown({
+				// FIXME other actions
+				lazyButtons: () => mailViewerMoreActions(viewModel, noOp, noOp),
+				width: this.dropdownWidth(),
+				withBackground: true,
+			}),
+			icon: Icons.More,
+		})
+	}
+
+	private deleteButton({viewModel}: MobileMailActionBarAttrs): Children {
+		return m(IconButton, {
+			title: "delete_action",
+			click: () => promptAndDeleteMails(viewModel.mailModel, [viewModel.mail], noOp),
+			icon: Icons.Trash,
+		})
+	}
+
+	private forwardButton({viewModel}: MobileMailActionBarAttrs): Children {
+		return m(IconButton, {
+			title: "forward_action",
+			click: () => viewModel.forward()
+								  .catch(ofClass(UserError, showUserError)),
+			icon: Icons.Forward,
+		})
+	}
+
+	private replyButton({viewModel}: MobileMailActionBarAttrs) {
+		return m(IconButton, {
 			title: "reply_action",
 			click: viewModel.canReplyAll()
-				? createDropdown({
-					lazyButtons: () => {
+				? (e, dom) => {
+					const dropdown = new Dropdown(() => {
 						const buttons: DropdownButtonAttrs[] = []
 						buttons.push({
 							label: "replyAll_action",
@@ -38,69 +141,22 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 							click: () => viewModel.reply(false),
 						})
 						return buttons
-					},
-					overrideOrigin: (original) => {
-						const domRect = this.dom?.getBoundingClientRect()
-						if (domRect) {
-							// FIXME
-							domRect.y -= 4
-							return domRect
-						} else {
-							return original
-						}
-					},
-					// FIXME questionable?
-					width: this.dom?.offsetWidth ? this.dom.offsetWidth - DROPDOWN_MARGIN * 2 : undefined,
-				})
+					}, this.dropdownWidth() ?? 300)
+
+
+					const domRect = this.dom?.getBoundingClientRect() ?? dom.getBoundingClientRect()
+					// FIXME
+					domRect.y -= 4
+					dropdown.setOrigin(domRect)
+					modal.displayUnique(dropdown, true)
+				}
 				: () => viewModel.reply(false),
 			icon: viewModel.canReplyAll() ? Icons.ReplyAll : Icons.Reply,
-		}))
+		})
+	}
 
-
-		actions.push(
-			m(IconButton, {
-				title: "forward_action",
-				click: () => viewModel.forward()
-									  .catch(ofClass(UserError, showUserError)),
-				icon: Icons.Forward,
-			}),
-		)
-
-		actions.push(
-			m(IconButton, {
-				title: "delete_action",
-				click: () => promptAndDeleteMails(viewModel.mailModel, [viewModel.mail], noOp),
-				icon: Icons.Trash,
-			}),
-		)
-
-		actions.push(
-			m(IconButton, {
-				title: "move_action",
-				click: noOp,
-				icon: Icons.Folder,
-			}),
-		)
-
-		actions.push(
-			m(IconButton, {
-				title: "more_label",
-				click: noOp,
-				icon: Icons.More,
-			}),
-		)
-
-		return m(".bottom-nav.bottom-action-bar.flex.items-center.plr-l", {
-			oncreate: (vnode) => {
-				console.log("action bar created??", vnode.dom)
-				this.dom = vnode.dom as HTMLElement
-			},
-			style: {
-				justifyContent: "space-between",
-			}
-		}, [
-			actions,
-		])
-
+	private editButton(attrs: MobileMailActionBarAttrs) {
+		// FIXME
+		return m("")
 	}
 }
