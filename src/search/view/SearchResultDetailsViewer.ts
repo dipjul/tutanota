@@ -47,7 +47,11 @@ export class SearchResultDetailsViewer {
 			)
 		} else {
 			return this._viewer?.mode === "mail"
-				? m(MailViewer, {viewModel: this._viewer.viewModel})
+				? m(MailViewer, {
+					viewModel: this._viewer.viewModel,
+					// FIXME
+					onShowHeaders: noOp,
+				})
 				: this._viewer != null
 					? m(this._viewer.viewer)
 					: null

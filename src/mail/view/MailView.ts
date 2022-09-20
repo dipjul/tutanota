@@ -108,6 +108,7 @@ export class MailView implements CurrentView {
 
 	private multiMailViewer: MultiMailViewer
 	private _mailViewerViewModel: MailViewerViewModel | null = null
+	private mailHeaderDialog: Dialog | null = null
 
 	get mailViewerViewModel(): MailViewerViewModel | null {
 		return this._mailViewerViewModel
@@ -189,7 +190,8 @@ export class MailView implements CurrentView {
 					".mail",
 					this.mailViewerViewModel != null
 						? m(MailViewer, {
-							viewModel: this.mailViewerViewModel
+							viewModel: this.mailViewerViewModel,
+							onShowHeaders: () => this.showHeaders(),
 						})
 						: m(this.multiMailViewer)
 				),
@@ -317,6 +319,40 @@ export class MailView implements CurrentView {
 			colors: ButtonColor.Header,
 		}
 		return isNewMailActionAvailable() ? m(Button, openMailButtonAttrs) : null
+	}
+
+	private async showHeaders() {
+		if (this.mailHeaderDialog != null || this.mailViewerViewModel == null) {
+			return
+		}
+		const headerInfo = await this.mailViewerViewModel.getHeaders()
+		const closeHeadersAction = () => {
+			this.mailHeaderDialog?.close()
+			this.mailHeaderDialog = null
+		}
+
+		this.mailHeaderDialog = Dialog
+			.largeDialog({
+				right: [
+					{
+						label: "ok_action",
+						click: closeHeadersAction,
+						type: ButtonType.Secondary,
+					},
+				],
+				middle: () => lang.get("mailHeaders_title"),
+			}, {
+				view: () => {
+					return m(".white-space-pre.pt.pb.selectable", headerInfo)
+				},
+			})
+			.addShortcut({
+				key: Keys.ESC,
+				exec: closeHeadersAction,
+				help: "close_alt",
+			})
+			.setCloseHandler(closeHeadersAction)
+			.show()
 	}
 
 	_getShortcuts(): Array<Shortcut> {

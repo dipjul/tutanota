@@ -2,39 +2,27 @@ import {size} from "../../gui/size"
 import m, {Children, Component, Vnode} from "mithril"
 import stream from "mithril/stream"
 import {windowFacade, windowSizeListener} from "../../misc/WindowFacade"
-import {FeatureType, InboxRuleType, Keys, MailFolderType, MailReportType, SpamRuleFieldType, SpamRuleType,} from "../../api/common/TutanotaConstants"
+import {FeatureType, InboxRuleType, Keys, MailFolderType, SpamRuleFieldType, SpamRuleType,} from "../../api/common/TutanotaConstants"
 import type {Mail} from "../../api/entities/tutanota/TypeRefs.js"
-import {InfoLink, lang} from "../../misc/LanguageViewModel"
+import {lang} from "../../misc/LanguageViewModel"
 import {assertMainOrNode, isDesktop} from "../../api/common/Env"
-import {Dialog} from "../../gui/base/Dialog"
 import {defer, DeferredObject, neverNull, noOp, ofClass,} from "@tutao/tutanota-utils"
-import {
-	createNewContact,
-	getExistingRuleForType,
-	getFolderIcon,
-	getFolderName,
-	getSortedCustomFolders,
-	getSortedSystemFolders,
-	isTutanotaTeamMail,
-} from "../model/MailUtils"
+import {createNewContact, getExistingRuleForType, isTutanotaTeamMail,} from "../model/MailUtils"
 import ColumnEmptyMessageBox from "../../gui/base/ColumnEmptyMessageBox"
 import type {Shortcut} from "../../misc/KeyManager"
 import {keyManager} from "../../misc/KeyManager"
 import {logins} from "../../api/main/LoginController"
 import {progressIcon} from "../../gui/base/Icon"
 import {Icons} from "../../gui/base/icons/Icons"
-import {LockedError} from "../../api/common/error/RestError"
 import {theme} from "../../gui/theme"
 import {client} from "../../misc/ClientDetector"
-import {showProgressDialog} from "../../gui/dialogs/ProgressDialog"
-import {Button, ButtonType} from "../../gui/base/Button.js"
 import {styles} from "../../gui/styles"
-import {createAsyncDropdown, DropdownButtonAttrs, showDropdownAtPosition} from "../../gui/base/Dropdown.js"
+import {DropdownButtonAttrs, showDropdownAtPosition} from "../../gui/base/Dropdown.js"
 import {navButtonRoutes} from "../../misc/RouteChange"
 import type {InlineImageReference} from "./MailGuiUtils"
-import {moveMails, replaceCidsWithInlineImages} from "./MailGuiUtils"
+import {replaceCidsWithInlineImages} from "./MailGuiUtils"
 import {locator} from "../../api/main/MainLocator"
-import {getCoordsOfMouseOrTouchEvent, ifAllowedTutanotaLinks} from "../../gui/base/GuiUtils"
+import {getCoordsOfMouseOrTouchEvent} from "../../gui/base/GuiUtils"
 import {copyToClipboard} from "../../misc/ClipboardUtils";
 import {ContentBlockingStatus, MailViewerViewModel} from "./MailViewerViewModel"
 import {getListId} from "../../api/common/utils/EntityUtils"
@@ -62,7 +50,8 @@ type MailAddressAndName = {
 }
 
 export type MailViewerAttrs = {
-	viewModel: MailViewerViewModel
+	viewModel: MailViewerViewModel,
+	onShowHeaders: () => unknown,
 }
 
 /**
@@ -75,8 +64,6 @@ export class MailViewer implements Component<MailViewerAttrs> {
 	/** it is set after we measured mail body element */
 	private bodyLineHeight: number | null = null
 
-	private mailHeaderDialog: Dialog
-	private mailHeaderInfo: string
 	private isScaling = true
 
 	private lastBodyTouchEndTime = 0
@@ -112,30 +99,9 @@ export class MailViewer implements Component<MailViewerAttrs> {
 	constructor(vnode: Vnode<MailViewerAttrs>) {
 		this.setViewModel(vnode.attrs.viewModel)
 
-		const closeAction = () => this.mailHeaderDialog.close()
-		this.mailHeaderInfo = ""
-		this.mailHeaderDialog = Dialog.largeDialog({
-			right: [
-				{
-					label: "ok_action",
-					click: closeAction,
-					type: ButtonType.Secondary,
-				},
-			],
-			middle: () => lang.get("mailHeaders_title"),
-		}, {
-			view: () => {
-				return m(".white-space-pre.pt.pb.selectable", this.mailHeaderInfo)
-			},
-		}).addShortcut({
-			key: Keys.ESC,
-			exec: closeAction,
-			help: "close_alt",
-		}).setCloseHandler(closeAction)
-
 		this.resizeListener = () => this.domBodyDeferred.promise.then(dom => this.updateLineHeight(dom))
 
-		this.shortcuts = this.setupShortcuts()
+		this.shortcuts = this.setupShortcuts(vnode.attrs)
 	}
 
 	oncreate() {
@@ -180,7 +146,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 			m(
 				"#mail-viewer.fill-absolute" + (scrollingHeader ? ".scroll-no-overlay.overflow-x-hidden" : ".flex.flex-column"),
 				[
-					this.renderMailHeader(),
+					this.renderMailHeader(vnode.attrs),
 					m(
 						".flex-grow.mlr-safe-inset.scroll-x.plr-l.pb-floating.pt" +
 						(scrollingHeader ? "" : ".scroll-no-overlay") +
@@ -197,13 +163,13 @@ export class MailViewer implements Component<MailViewerAttrs> {
 		]
 	}
 
-	private renderMailHeader() {
+	private renderMailHeader(attrs: MailViewerAttrs) {
 		return m(MailViewerHeader, {
 			viewModel: this.viewModel,
 			createMailAddressContextButtons: this.createMailAddressContextButtons.bind(this),
 			onSetContentBlockingStatus: (status) => this.setContentBlockingStatus(status),
 			onEditDraft: () => this.editDraft(),
-			onShowHeaders: () => this.showHeaders(),
+			onShowHeaders: attrs.onShowHeaders,
 		})
 	}
 
@@ -349,14 +315,14 @@ export class MailViewer implements Component<MailViewerAttrs> {
 
 	private renderLoadingIcon(): Children {
 		return m(".progress-panel.flex-v-center.items-center",
-				{
-					key: "loadingIcon",
-					style: {
-						height: "200px",
-					},
+			{
+				key: "loadingIcon",
+				style: {
+					height: "200px",
 				},
-				[progressIcon(), m("small", lang.get("loading_msg"))],
-			)
+			},
+			[progressIcon(), m("small", lang.get("loading_msg"))],
+		)
 	}
 
 	async replaceInlineImages() {
@@ -408,7 +374,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 		child.style.transformOrigin = "top left"
 	}
 
-	private setupShortcuts(): Array<Shortcut> {
+	private setupShortcuts(attrs: MailViewerAttrs): Array<Shortcut> {
 		const userController = logins.getUserController()
 		const shortcuts: Shortcut[] = [
 			{
@@ -422,7 +388,9 @@ export class MailViewer implements Component<MailViewerAttrs> {
 			{
 				key: Keys.H,
 				enabled: () => !this.viewModel.isDraftMail(),
-				exec: () => this.showHeaders(),
+				exec: () => {
+					attrs.onShowHeaders()
+				},
 				help: "showHeaders_action",
 			},
 			{
@@ -563,15 +531,6 @@ export class MailViewer implements Component<MailViewerAttrs> {
 		}
 
 		return buttons
-	}
-
-	private showHeaders() {
-		if (!this.mailHeaderDialog.visible) {
-			this.viewModel.getHeaders().then(headers => {
-				this.mailHeaderInfo = headers ?? lang.get("noMailHeadersInfo_msg")
-				this.mailHeaderDialog.show()
-			})
-		}
 	}
 
 	private handleDoubleTap(e: TouchEvent, singleClickAction: (e: TouchEvent) => void, doubleClickAction: (e: TouchEvent) => void) {
