@@ -96,7 +96,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			// FIXME: this layout assumes two columns, it this what we want? On mobile it doesn't leave that much space fro the sender address, maybe it should
 			//   be two rows instead?
 			m(".flex.col", [
-				m(".small", getSenderHeading(viewModel.mail, false)),
+				m(".small.flex.items-start", [this.tutaoBadge(viewModel), getSenderHeading(viewModel.mail, false)]),
 				m(".flex", this.getRecipientEmailAddress(attrs)),
 			]),
 			m(".flex-grow"),
@@ -469,8 +469,8 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					classes: ".mr-s",
 				},
 				"Tutanota Team",
-			)
-			: null
+
+)			: null
 	}
 
 	private renderPhishingWarning(viewModel: MailViewerViewModel): Children | null {
