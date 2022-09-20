@@ -63,6 +63,7 @@ import {IconButton, IconButtonAttrs} from "../../gui/base/IconButton.js"
 import {ButtonSize} from "../../gui/base/ButtonSize.js"
 import {BottomNav} from "../../gui/nav/BottomNav.js"
 import {MobileMailActionBar} from "./MobileMailActionBar.js"
+import {showHeaderDialog} from "./MailViewerUtils.js"
 
 assertMainOrNode()
 
@@ -108,7 +109,6 @@ export class MailView implements CurrentView {
 
 	private multiMailViewer: MultiMailViewer
 	private _mailViewerViewModel: MailViewerViewModel | null = null
-	private mailHeaderDialog: Dialog | null = null
 
 	get mailViewerViewModel(): MailViewerViewModel | null {
 		return this._mailViewerViewModel
@@ -191,7 +191,7 @@ export class MailView implements CurrentView {
 					this.mailViewerViewModel != null
 						? m(MailViewer, {
 							viewModel: this.mailViewerViewModel,
-							onShowHeaders: () => this.showHeaders(),
+							onShowHeaders: () => this.mailViewerViewModel && showHeaderDialog(this.mailViewerViewModel.getHeaders()),
 						})
 						: m(this.multiMailViewer)
 				),
@@ -321,39 +321,6 @@ export class MailView implements CurrentView {
 		return isNewMailActionAvailable() ? m(Button, openMailButtonAttrs) : null
 	}
 
-	private async showHeaders() {
-		if (this.mailHeaderDialog != null || this.mailViewerViewModel == null) {
-			return
-		}
-		const headerInfo = await this.mailViewerViewModel.getHeaders()
-		const closeHeadersAction = () => {
-			this.mailHeaderDialog?.close()
-			this.mailHeaderDialog = null
-		}
-
-		this.mailHeaderDialog = Dialog
-			.largeDialog({
-				right: [
-					{
-						label: "ok_action",
-						click: closeHeadersAction,
-						type: ButtonType.Secondary,
-					},
-				],
-				middle: () => lang.get("mailHeaders_title"),
-			}, {
-				view: () => {
-					return m(".white-space-pre.pt.pb.selectable", headerInfo)
-				},
-			})
-			.addShortcut({
-				key: Keys.ESC,
-				exec: closeHeadersAction,
-				help: "close_alt",
-			})
-			.setCloseHandler(closeHeadersAction)
-			.show()
-	}
 
 	_getShortcuts(): Array<Shortcut> {
 		return [
