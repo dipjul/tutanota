@@ -66,7 +66,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 				this.renderConnectionLostBanner(viewModel),
 				this.renderEventBanner(viewModel),
 				m(".plr-l", this.renderBanners(attrs)),
-				// FIXME
 				m("", this.renderSubject(viewModel)),
 			])
 		} else {
@@ -94,7 +93,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			}
 		}, [
 			// FIXME make sure the heading text actually wraps.
-			m(".small.flex.flex-wrap.items-start", [this.tutaoBadge(viewModel), getSenderHeading(viewModel.mail, false)]),
+			m(".small.flex.flex-wrap.items-start", [this.tutaoBadge(viewModel), m("span.text-break", getSenderHeading(viewModel.mail, false))]),
 			m(".flex", [
 				this.getRecipientEmailAddress(attrs),
 				m(".flex-grow"),
