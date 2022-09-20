@@ -8,6 +8,8 @@ import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {mailViewerMoreActions, promptAndDeleteMails, showMoveMailsDropdown} from "./MailGuiUtils.js"
 import {noOp, ofClass} from "@tutao/tutanota-utils"
 import {modal} from "../../gui/base/Modal.js"
+import {editDraft} from "./MailViewerUtils.js"
+import {px, size} from "../../gui/size.js"
 
 export interface MobileMailActionBarAttrs {
 	viewModel: MailViewerViewModel,
@@ -31,11 +33,11 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 			]
 		} else if (viewModel.isDraftMail()) {
 			actions = [
-				this.editButton(attrs),
+				this.placeholder(),
 				this.placeholder(),
 				this.deleteButton(attrs),
 				this.placeholder(),
-				this.placeholder(),
+				this.editButton(attrs),
 			]
 		} else if (viewModel.canForwardOrMove()) {
 			actions = [
@@ -70,8 +72,11 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 	}
 
 	private placeholder() {
-		// FIXME
-		return m("")
+		return m("", {
+			style: {
+				width: px(size.button_height),
+			}
+		})
 	}
 
 	private moveButton({viewModel}: MobileMailActionBarAttrs) {
@@ -95,8 +100,7 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 		return m(IconButton, {
 			title: "more_label",
 			click: createDropdown({
-				// FIXME other actions
-				lazyButtons: () => mailViewerMoreActions(viewModel, noOp, noOp),
+				lazyButtons: () => mailViewerMoreActions(viewModel),
 				width: this.dropdownWidth(),
 				withBackground: true,
 			}),
@@ -156,7 +160,10 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 	}
 
 	private editButton(attrs: MobileMailActionBarAttrs) {
-		// FIXME
-		return m("")
+		return m(IconButton, {
+			title: "edit_action",
+			icon: Icons.Edit,
+			click: () => editDraft(attrs.viewModel)
+		})
 	}
 }

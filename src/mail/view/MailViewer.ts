@@ -36,6 +36,7 @@ import {isNewMailActionAvailable} from "../../gui/nav/NavFunctions"
 import {CancelledError} from "../../api/common/error/CancelledError"
 import {ProgrammingError} from "../../api/common/error/ProgrammingError.js"
 import {MailViewerHeader} from "./MailViewerHeader.js"
+import {editDraft, showHeaderDialog} from "./MailViewerUtils.js"
 
 assertMainOrNode()
 // map of inline image cid to InlineImageReference
@@ -51,7 +52,6 @@ type MailAddressAndName = {
 
 export type MailViewerAttrs = {
 	viewModel: MailViewerViewModel,
-	onShowHeaders: () => unknown,
 }
 
 /**
@@ -93,6 +93,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 
 	private shadowDomRoot: ShadowRoot | null = null
 	private currentlyRenderedMailBody: DocumentFragment | null = null
+	private lastContentBlockingStatus: ContentBlockingStatus | null = null
 
 	private loadAllListener = stream()
 
@@ -130,6 +131,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 
 			// Reset scaling status if it's a new email.
 			this.isScaling = true
+			this.lastContentBlockingStatus = null
 			this.viewModel.loadAll()
 
 			this.delayProgressSpinner = true
@@ -141,12 +143,14 @@ export class MailViewer implements Component<MailViewerAttrs> {
 	}
 
 	view(vnode: Vnode<MailViewerAttrs>): Children {
+		this.handleContentBlockingOnRender()
+
 		const scrollingHeader = styles.isSingleColumnLayout()
 		return [
 			m(
 				"#mail-viewer.fill-absolute" + (scrollingHeader ? ".scroll-no-overlay.overflow-x-hidden" : ".flex.flex-column"),
 				[
-					this.renderMailHeader(vnode.attrs),
+					this.renderMailHeader(),
 					m(
 						".flex-grow.mlr-safe-inset.scroll-x.plr-l.pb-floating.pt" +
 						(scrollingHeader ? "" : ".scroll-no-overlay") +
@@ -163,13 +167,22 @@ export class MailViewer implements Component<MailViewerAttrs> {
 		]
 	}
 
-	private renderMailHeader(attrs: MailViewerAttrs) {
+	private handleContentBlockingOnRender() {
+		if (this.lastContentBlockingStatus != null && this.viewModel.getContentBlockingStatus() != this.lastContentBlockingStatus) {
+			Promise.resolve().then(async () => {
+				// Wait for new mail body to be rendered before replacing images. Probably not necessary anymore as we already schedule it after the render
+				// but better be safe.
+				m.redraw.sync()
+				await this.replaceInlineImages()
+			})
+		}
+		this.lastContentBlockingStatus = this.viewModel.getContentBlockingStatus()
+	}
+
+	private renderMailHeader() {
 		return m(MailViewerHeader, {
 			viewModel: this.viewModel,
 			createMailAddressContextButtons: this.createMailAddressContextButtons.bind(this),
-			onSetContentBlockingStatus: (status) => this.setContentBlockingStatus(status),
-			onEditDraft: () => this.editDraft(),
-			onShowHeaders: attrs.onShowHeaders,
 		})
 	}
 
@@ -381,7 +394,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 				key: Keys.E,
 				enabled: () => this.viewModel.isDraftMail(),
 				exec: () => {
-					this.editDraft()
+					editDraft(this.viewModel)
 				},
 				help: "editMail_action",
 			},
@@ -389,7 +402,7 @@ export class MailViewer implements Component<MailViewerAttrs> {
 				key: Keys.H,
 				enabled: () => !this.viewModel.isDraftMail(),
 				exec: () => {
-					attrs.onShowHeaders()
+					showHeaderDialog(this.viewModel.getHeaders())
 				},
 				help: "showHeaders_action",
 			},
@@ -569,12 +582,6 @@ export class MailViewer implements Component<MailViewerAttrs> {
 
 	private async setContentBlockingStatus(status: ContentBlockingStatus) {
 		await this.viewModel.setContentBlockingStatus(status)
-		// Wait for new mail body to be rendered before replacing images
-		m.redraw.sync()
-		// FIXME this is not an optimal location for what we want to do. This assumes that the content blocking status can only be changed from inside of
-		//  this class and we want to trigger it from the action bar. It would be better if we could detect that the change has happened (e.g. in the view())
-		//  and just schedule replacement after Promise.resolve() or raf()
-		await this.replaceInlineImages()
 	}
 
 	private addSpamRule(defaultInboxRuleField: InboxRuleType | null, address: string) {
@@ -609,35 +616,6 @@ export class MailViewer implements Component<MailViewerAttrs> {
 					field: spamRuleField,
 				}),
 			)
-		})
-	}
-
-	private editDraft(): Promise<void> {
-		return checkApprovalStatus(logins, false).then(sendAllowed => {
-			if (sendAllowed) {
-				// check if to be opened draft has already been minimized, iff that is the case, re-open it
-				const minimizedEditor = locator.minimizedMailModel.getEditorForDraft(this.viewModel.mail)
-
-				if (minimizedEditor) {
-					locator.minimizedMailModel.reopenMinimizedEditor(minimizedEditor)
-				} else {
-					return Promise.all([this.viewModel.mailModel.getMailboxDetailsForMail(this.viewModel.mail), import("../editor/MailEditor")])
-								  .then(([mailboxDetails, {newMailEditorFromDraft}]) => {
-									  return newMailEditorFromDraft(
-										  this.viewModel.mail,
-										  this.viewModel.getAttachments(),
-										  this.viewModel.getMailBody(),
-										  this.viewModel.isBlockingExternalImages(),
-										  this.viewModel.getLoadedInlineImages(),
-										  mailboxDetails,
-									  )
-								  })
-								  .then(editorDialog => {
-									  editorDialog.show()
-								  })
-								  .catch(ofClass(UserError, showUserError))
-				}
-			}
 		})
 	}
 

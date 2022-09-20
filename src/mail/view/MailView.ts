@@ -191,7 +191,6 @@ export class MailView implements CurrentView {
 					this.mailViewerViewModel != null
 						? m(MailViewer, {
 							viewModel: this.mailViewerViewModel,
-							onShowHeaders: () => this.mailViewerViewModel && showHeaderDialog(this.mailViewerViewModel.getHeaders()),
 						})
 						: m(this.multiMailViewer)
 				),

@@ -25,6 +25,7 @@ import {ifAllowedTutanotaLinks} from "../../gui/base/GuiUtils.js"
 import {Button, ButtonType} from "../../gui/base/Button.js"
 import {client} from "../../misc/ClientDetector.js"
 import {showProgressDialog} from "../../gui/dialogs/ProgressDialog.js"
+import {showHeaderDialog} from "./MailViewerUtils.js"
 
 export function showDeleteConfirmationDialog(mails: ReadonlyArray<Mail>): Promise<boolean> {
 	let groupedMails = mails.reduce(
@@ -317,8 +318,6 @@ export function showMoveMailsDropdown(model: MailModel, origin: PosRect, mails: 
 //  but they are still kind of tightly coupled to the MailViewer instance.
 export function mailViewerMoreActions(
 	viewModel: MailViewerViewModel,
-	onShowHeaders: () => unknown,
-	onSetContentBlockingStatus: (status: ContentBlockingStatus) => unknown,
 ) {
 	const moreButtons: Array<DropdownButtonAttrs> = []
 	if (viewModel.isUnread()) {
@@ -362,7 +361,7 @@ export function mailViewerMoreActions(
 	if (viewModel.canShowHeaders()) {
 		moreButtons.push({
 			label: "showHeaders_action",
-			click: () => onShowHeaders(),
+			click: () => showHeaderDialog(viewModel.getHeaders()),
 			icon: Icons.ListUnordered,
 		})
 	}
@@ -378,9 +377,7 @@ export function mailViewerMoreActions(
 	if (viewModel.canPersistBlockingStatus() && viewModel.isShowingExternalContent()) {
 		moreButtons.push({
 			label: "disallowExternalContent_action",
-			click: async () => {
-				await onSetContentBlockingStatus(ContentBlockingStatus.Block)
-			},
+			click: () => viewModel.setContentBlockingStatus(ContentBlockingStatus.Block),
 			icon: Icons.Picture,
 		})
 	}
@@ -388,9 +385,7 @@ export function mailViewerMoreActions(
 	if (viewModel.canPersistBlockingStatus() && viewModel.isBlockingExternalImages()) {
 		moreButtons.push({
 			label: "showImages_action",
-			click: async () => {
-				await onSetContentBlockingStatus(ContentBlockingStatus.Show)
-			},
+			click: () => viewModel.setContentBlockingStatus(ContentBlockingStatus.Show),
 			icon: Icons.Picture,
 		})
 	}

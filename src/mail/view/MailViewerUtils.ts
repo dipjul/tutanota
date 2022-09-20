@@ -1,6 +1,6 @@
 import type {ImageHandler} from "../model/MailUtils"
 import {ALLOWED_IMAGE_FORMATS, Keys, MAX_BASE64_IMAGE_SIZE} from "../../api/common/TutanotaConstants"
-import {uint8ArrayToBase64} from "@tutao/tutanota-utils"
+import {ofClass, uint8ArrayToBase64} from "@tutao/tutanota-utils"
 import {lang} from "../../misc/LanguageViewModel"
 import {Dialog} from "../../gui/base/Dialog"
 import {DataFile} from "../../api/common/DataFile"
@@ -8,6 +8,12 @@ import {showFileChooser} from "../../file/FileController.js"
 import m from "mithril"
 import {ButtonType} from "../../gui/base/Button.js"
 import {progressIcon} from "../../gui/base/Icon.js"
+import {checkApprovalStatus} from "../../misc/LoginUtils.js"
+import {logins} from "../../api/main/LoginController.js"
+import {locator} from "../../api/main/MainLocator.js"
+import {UserError} from "../../api/main/UserError.js"
+import {showUserError} from "../../misc/ErrorHandlerImpl.js"
+import {MailViewerViewModel} from "./MailViewerViewModel.js"
 
 export function insertInlineImageB64ClickHandler(ev: Event, handler: ImageHandler) {
 	showFileChooser(true, ALLOWED_IMAGE_FORMATS).then(files => {
@@ -73,4 +79,33 @@ export async function showHeaderDialog(headersPromise: Promise<string | null>) {
 		})
 		.setCloseHandler(closeHeadersAction)
 		.show()
+}
+
+export async function editDraft(viewModel: MailViewerViewModel): Promise<void> {
+	return checkApprovalStatus(logins, false).then(sendAllowed => {
+		if (sendAllowed) {
+			// check if to be opened draft has already been minimized, iff that is the case, re-open it
+			const minimizedEditor = locator.minimizedMailModel.getEditorForDraft(viewModel.mail)
+
+			if (minimizedEditor) {
+				locator.minimizedMailModel.reopenMinimizedEditor(minimizedEditor)
+			} else {
+				return Promise.all([viewModel.mailModel.getMailboxDetailsForMail(viewModel.mail), import("../editor/MailEditor")])
+							  .then(([mailboxDetails, {newMailEditorFromDraft}]) => {
+								  return newMailEditorFromDraft(
+									  viewModel.mail,
+									  viewModel.getAttachments(),
+									  viewModel.getMailBody(),
+									  viewModel.isBlockingExternalImages(),
+									  viewModel.getLoadedInlineImages(),
+									  mailboxDetails,
+								  )
+							  })
+							  .then(editorDialog => {
+								  editorDialog.show()
+							  })
+							  .catch(ofClass(UserError, showUserError))
+			}
+		}
+	})
 }

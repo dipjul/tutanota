@@ -50,7 +50,6 @@ export class SearchResultDetailsViewer {
 			return viewer?.mode === "mail"
 				? m(MailViewer, {
 					viewModel: viewer.viewModel,
-					onShowHeaders: () => showHeaderDialog(viewer.viewModel.getHeaders()),
 				})
 				: viewer != null
 					? m(viewer.viewer)

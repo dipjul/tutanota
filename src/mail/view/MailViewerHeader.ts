@@ -26,6 +26,7 @@ import {mailViewerMoreActions, promptAndDeleteMails, showMoveMailsDropdown} from
 import {UserError} from "../../api/main/UserError.js"
 import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {BootIcons} from "../../gui/base/icons/BootIcons.js"
+import {editDraft} from "./MailViewerUtils.js"
 
 export interface MailAddressAndName {
 	name: string
@@ -42,10 +43,7 @@ export interface MailViewerHeaderAttrs {
 	// Passing the whole viewModel because there are a lot of separate bits we might need.
 	// If we want to reuse this view we should probably pass everything on its own.
 	viewModel: MailViewerViewModel
-	onSetContentBlockingStatus: (status: ContentBlockingStatus) => unknown
 	createMailAddressContextButtons: MailAddressDropdownCreator
-	onEditDraft: () => unknown
-	onShowHeaders: () => unknown,
 }
 
 /** The upper part of the mail viewer, everything but the mail body itself. */
@@ -95,6 +93,8 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 				this.detailsExpanded = !this.detailsExpanded
 			}
 		}, [
+			// FIXME: this layout assumes two columns, it this what we want? On mobile it doesn't leave that much space fro the sender address, maybe it should
+			//   be two rows instead?
 			m(".flex.col", [
 				m(".small", getSenderHeading(viewModel.mail, false)),
 				m(".flex", this.getRecipientEmailAddress(attrs)),
@@ -111,6 +111,8 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							icon: Icons.Lock,
 							style: {
 								fill: theme.content_fg,
+								// A hack to align it with the date baseline. align-items: baseline doesn't really do it
+								marginBottom: "2px",
 							},
 						})
 						: null,
@@ -536,19 +538,19 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 
 		const showButton: ButtonAttrs = {
 			label: "showBlockedContent_action",
-			click: () => attrs.onSetContentBlockingStatus(ContentBlockingStatus.Show),
+			click: () => attrs.viewModel.setContentBlockingStatus(ContentBlockingStatus.Show),
 		}
 		const alwaysOrNeverAllowButtons = attrs.viewModel.canPersistBlockingStatus()
 			? [
 				attrs.viewModel.isMailAuthenticated()
 					? {
 						label: "allowExternalContentSender_action" as const,
-						click: () => attrs.onSetContentBlockingStatus(ContentBlockingStatus.AlwaysShow),
+						click: () => attrs.viewModel.setContentBlockingStatus(ContentBlockingStatus.AlwaysShow),
 					}
 					: null,
 				{
 					label: "blockExternalContentSender_action" as const,
-					click: () => attrs.onSetContentBlockingStatus(ContentBlockingStatus.AlwaysBlock),
+					click: () => attrs.viewModel.setContentBlockingStatus(ContentBlockingStatus.AlwaysBlock),
 				},
 			].filter(isNotNull)
 			: []
@@ -596,7 +598,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			actions.push(
 				m(IconButton, {
 					title: "edit_action",
-					click: () => attrs.onEditDraft(),
+					click: () => editDraft(viewModel),
 					icon: Icons.Edit,
 				}),
 			)
@@ -688,12 +690,10 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 
 	private prepareMoreActions({
 								   viewModel,
-								   onSetContentBlockingStatus,
-								   onShowHeaders,
 							   }: MailViewerHeaderAttrs
 	) {
 		return createDropdown({
-			lazyButtons: () => mailViewerMoreActions(viewModel, onShowHeaders, onSetContentBlockingStatus),
+			lazyButtons: () => mailViewerMoreActions(viewModel),
 			width: 300
 		})
 	}
