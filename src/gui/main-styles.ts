@@ -939,6 +939,14 @@ styles.registerStyle("main", () => {
 		".border-radius": {
 			"border-radius": px(size.border_radius),
 		},
+		".border-radius-top": {
+			"border-top-left-radius": px(size.border_radius),
+			"border-top-right-radius": px(size.border_radius),
+		},
+		".border-radius-bottom": {
+			"border-bottom-left-radius": px(size.border_radius),
+			"border-bottom-right-radius": px(size.border_radius),
+		},
 		".editor-border": {
 			border: `1px solid ${theme.content_border}`,
 			"padding-top": px(size.vpad_small),
