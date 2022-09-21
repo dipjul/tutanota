@@ -97,7 +97,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			m(".flex", [
 				this.getRecipientEmailAddress(attrs),
 				m(".flex-grow"),
-				m(".flex.items-end.content-accent-fg.svg-content-accent-fg.white-space-pre.ml-s", {
+				m(".flex.items-center.white-space-pre.ml-s", {
 						// Orca refuses to read ut unless it's not focusable
 						tabindex: TabIndex.Default,
 						"aria-label": lang.get(viewModel.isConfidential() ? "confidential_action" : "nonConfidential_action") + ", " + dateTime,
@@ -108,9 +108,9 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 								icon: Icons.Lock,
 								style: {
 									fill: theme.content_fg,
-									// A hack to align it with the date baseline. align-items: baseline doesn't really do it
-									marginBottom: "2px",
 								},
+								// flex makes svg inside centered and not randomly somewhere
+								class: "flex",
 							})
 							: null,
 						m("small.date.content-fg.selectable",
@@ -466,8 +466,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					classes: ".mr-s",
 				},
 				"Tutanota Team",
-
-)			: null
+			) : null
 	}
 
 	private renderPhishingWarning(viewModel: MailViewerViewModel): Children | null {
@@ -700,7 +699,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 		const allRecipients = mail.toRecipients.concat(mail.ccRecipients).concat(mail.bccRecipients)
 
 		if (allRecipients.length > 0) {
-			return m(".flex.click.small.ml-between-s.border-radius.plr-s.ml-negative-s", {
+			return m(".flex.click.small.ml-between-s.border-radius.plr-s.ml-negative-s.items-center", {
 				style: {
 					// use this to allow the container to shrink, otherwise it doesn't want to cut the recipient address
 					minWidth: "20px",
