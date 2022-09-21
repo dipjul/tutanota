@@ -372,17 +372,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 									})
 								]
 							),
-							// m(ToggleButton, {
-							// 	icon: BootIcons.Expand,
-							// 	title: "showAll_action",
-							// 	selected: this.filesExpanded,
-							// 	onSelected: (expanded) => this.filesExpanded = expanded
-							// }),
-							// m(IconButton, {
-							// 	icon: Icons.Download,
-							// 	title: "saveAll_action",
-							// 	click: () => viewModel.downloadAll(),
-							// }),
 						],
 				]),
 
@@ -391,14 +380,20 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 					? m(ExpanderPanel, {
 							expanded: this.filesExpanded,
 						},
-						m(".flex.flex-wrap", {
-							style: {
-								"column-gap": px(size.hpad),
-							}
-						}, [
-							this.renderAttachmentContainer(viewModel, attachments),
-						])
-					) : null,
+						m(".flex.col", [
+								m(".flex.flex-wrap", {
+									style: {
+										"column-gap": px(size.hpad),
+									}
+								}, this.renderAttachmentContainer(viewModel, attachments)),
+								m(".flex", m(Button, {
+									label: "saveAll_action",
+									type: ButtonType.Secondary,
+									click: () => viewModel.downloadAll(),
+								}))
+							]
+						))
+					: null,
 			]
 		}
 	}
