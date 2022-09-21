@@ -879,7 +879,7 @@ export class MailView implements CurrentView {
 		this.mailList?.list.isMobileMultiSelectionActionActive()
 			? m(MultiSelectionBar, {
 				selectNoneHandler: () => this.mailList?.list.selectNone(),
-				selectedEntiesLength: this.mailList.list.getSelectedEntities().length,
+				text: String(this.mailList.list.getSelectedEntities().length),
 			}, m(ActionBar, {buttons: this.actionBarButtons()}))
 			: null
 	}

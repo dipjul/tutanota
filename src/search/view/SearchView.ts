@@ -604,7 +604,7 @@ export class SearchView implements CurrentView {
 		return this.viewSlider.getVisibleBackgroundColumns().length === 1 && this.searchList.list && this.searchList.list.isMobileMultiSelectionActionActive()
 			? m(MultiSelectionBar, {
 				selectNoneHandler: () => this.searchList.selectNone(),
-				selectedEntiesLength: this.searchList.getSelectedEntities().length,
+				text: String(this.searchList.getSelectedEntities().length),
 			}, m(ActionBar, {
 				buttons: this.viewer.multiSearchActionBarButtons(),
 			}))

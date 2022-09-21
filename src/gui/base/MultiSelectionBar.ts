@@ -4,7 +4,7 @@ import {IconButton} from "./IconButton.js"
 
 interface MultiSelectionBarAttrs {
 	selectNoneHandler: () => void
-	selectedEntiesLength: number
+	text: string
 }
 
 export class MultiSelectionBar {
@@ -23,7 +23,7 @@ export class MultiSelectionBar {
 					click: vnode.attrs.selectNoneHandler,
 					icon: Icons.Cancel,
 				}),
-				m(".ml-s.b", vnode.attrs.selectedEntiesLength),
+				m(".ml-s.b", vnode.attrs.text),
 				vnode.children
 			],
 		)

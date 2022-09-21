@@ -609,7 +609,7 @@ export class ContactView implements CurrentView {
 					selectNoneHandler: () => {
 						contactList.list.selectNone()
 					},
-					selectedEntiesLength: contactList.list.getSelectedEntities().length,
+					text: String(contactList.list.getSelectedEntities().length),
 				}, m(ActionBar, {
 					buttons: this._multiContactViewer.createActionBarButtons(() => {
 						if (contactList) contactList.list.selectNone()
