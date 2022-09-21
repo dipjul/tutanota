@@ -293,7 +293,7 @@ export function getReferencedAttachments(attachments: Array<TutanotaFile>, refer
 	return attachments.filter(file => referencedCids.find(rcid => file.cid === rcid))
 }
 
-export function showMoveMailsDropdown(model: MailModel, origin: PosRect, mails: Mail[], width: number = 300) {
+export function showMoveMailsDropdown(model: MailModel, origin: PosRect, mails: Mail[], width: number = 300, withBackground: boolean = false) {
 	if (emptyOrContainsDraftsAndNonDrafts(mails)) { // do not move mails if no mails or mails cannot be moved together
 		return
 	}
@@ -310,7 +310,7 @@ export function showMoveMailsDropdown(model: MailModel, origin: PosRect, mails: 
 
 
 		dropdown.setOrigin(new DomRectReadOnlyPolyfilled(origin.left, origin.top, origin.width, 0))
-		modal.displayUnique(dropdown, true)
+		modal.displayUnique(dropdown, withBackground)
 	})
 }
 

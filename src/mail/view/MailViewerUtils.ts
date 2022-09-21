@@ -1,6 +1,6 @@
 import type {ImageHandler} from "../model/MailUtils"
 import {ALLOWED_IMAGE_FORMATS, Keys, MAX_BASE64_IMAGE_SIZE} from "../../api/common/TutanotaConstants"
-import {ofClass, uint8ArrayToBase64} from "@tutao/tutanota-utils"
+import {neverNull, ofClass, uint8ArrayToBase64} from "@tutao/tutanota-utils"
 import {lang} from "../../misc/LanguageViewModel"
 import {Dialog} from "../../gui/base/Dialog"
 import {DataFile} from "../../api/common/DataFile"
@@ -14,6 +14,9 @@ import {locator} from "../../api/main/MainLocator.js"
 import {UserError} from "../../api/main/UserError.js"
 import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {MailViewerViewModel} from "./MailViewerViewModel.js"
+import {DropdownButtonAttrs} from "../../gui/base/Dropdown.js"
+import {getDisplayText} from "../model/MailUtils"
+import {BootIcons} from "../../gui/base/icons/BootIcons.js"
 
 export function insertInlineImageB64ClickHandler(ev: Event, handler: ImageHandler) {
 	showFileChooser(true, ALLOWED_IMAGE_FORMATS).then(files => {
@@ -106,6 +109,19 @@ export async function editDraft(viewModel: MailViewerViewModel): Promise<void> {
 							  })
 							  .catch(ofClass(UserError, showUserError))
 			}
+		}
+	})
+}
+
+/** Make options for "assign" buttons (for cases for mails with restricted participants). */
+export async function makeAssignMailsButtons(viewModel: MailViewerViewModel): Promise<DropdownButtonAttrs[]> {
+	const assignmentGroupInfos = await viewModel.getAssignmentGroupInfos()
+
+	return assignmentGroupInfos.map(userOrMailGroupInfo => {
+		return {
+			label: () => getDisplayText(userOrMailGroupInfo.name, neverNull(userOrMailGroupInfo.mailAddress), true),
+			icon: BootIcons.Contacts,
+			click: () => viewModel.assignMail(userOrMailGroupInfo),
 		}
 	})
 }

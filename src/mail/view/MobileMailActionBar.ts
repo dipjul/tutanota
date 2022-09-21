@@ -8,7 +8,7 @@ import {showUserError} from "../../misc/ErrorHandlerImpl.js"
 import {mailViewerMoreActions, promptAndDeleteMails, showMoveMailsDropdown} from "./MailGuiUtils.js"
 import {noOp, ofClass} from "@tutao/tutanota-utils"
 import {modal} from "../../gui/base/Modal.js"
-import {editDraft} from "./MailViewerUtils.js"
+import {editDraft, makeAssignMailsButtons} from "./MailViewerUtils.js"
 import {px, size} from "../../gui/size.js"
 
 export interface MobileMailActionBarAttrs {
@@ -36,7 +36,7 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 				this.placeholder(),
 				this.placeholder(),
 				this.deleteButton(attrs),
-				this.placeholder(),
+				this.moveButton(attrs),
 				this.editButton(attrs),
 			]
 		} else if (viewModel.canForwardOrMove()) {
@@ -47,12 +47,20 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 				this.moveButton(attrs),
 				this.moreButton(attrs),
 			]
+		} else if (viewModel.canAssignMails()) {
+			actions = [
+				this.replyButton(attrs),
+				this.assignButton(attrs),
+				this.deleteButton(attrs),
+				this.placeholder(),
+				this.moreButton(attrs),
+			]
 		} else {
 			actions = [
-				this.placeholder(),
+				this.replyButton(attrs),
 				this.placeholder(),
 				this.deleteButton(attrs),
-				this.moveButton(attrs),
+				this.placeholder(),
 				this.moreButton(attrs),
 			]
 		}
@@ -87,6 +95,7 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 				dom.getBoundingClientRect(),
 				[viewModel.mail],
 				this.dropdownWidth(),
+				true,
 			),
 			icon: Icons.Folder,
 		})
@@ -135,7 +144,6 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 						buttons.push({
 							label: "replyAll_action",
 							icon: Icons.ReplyAll,
-							// FIXME
 							click: () => viewModel.reply(true)
 						})
 
@@ -149,8 +157,6 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 
 
 					const domRect = this.dom?.getBoundingClientRect() ?? dom.getBoundingClientRect()
-					// FIXME
-					domRect.y -= 4
 					dropdown.setOrigin(domRect)
 					modal.displayUnique(dropdown, true)
 				}
@@ -164,6 +170,19 @@ export class MobileMailActionBar implements Component<MobileMailActionBarAttrs> 
 			title: "edit_action",
 			icon: Icons.Edit,
 			click: () => editDraft(attrs.viewModel)
+		})
+	}
+
+	private assignButton(attrs: MobileMailActionBarAttrs) {
+		return m(IconButton, {
+			title: "forward_action",
+			icon: Icons.Forward,
+			click:
+				createAsyncDropdown({
+					lazyButtons: () => makeAssignMailsButtons(attrs.viewModel),
+					width: this.dropdownWidth(),
+					withBackground: true,
+				})
 		})
 	}
 }
