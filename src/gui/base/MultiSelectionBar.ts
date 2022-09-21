@@ -1,6 +1,6 @@
 import {Icons} from "./icons/Icons"
 import m, {Children, Vnode} from "mithril"
-import {Button} from "./Button.js"
+import {IconButton} from "./IconButton.js"
 
 interface MultiSelectionBarAttrs {
 	selectNoneHandler: () => void
@@ -18,10 +18,10 @@ export class MultiSelectionBar {
 			},
 
 			[
-				m(Button, {
-					label: "cancel_action",
+				m(IconButton, {
+					title: "cancel_action",
 					click: vnode.attrs.selectNoneHandler,
-					icon: () => Icons.Cancel,
+					icon: Icons.Cancel,
 				}),
 				m(".ml-s.b", vnode.attrs.selectedEntiesLength),
 				vnode.children
