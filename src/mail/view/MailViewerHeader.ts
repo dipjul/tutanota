@@ -58,6 +58,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 
 		if (styles.isSingleColumnLayout()) {
 			return m(".header.mlr-safe-inset.mt", [
+				this.renderFolderText(viewModel),
 				this.renderAddressesAndDate(viewModel, attrs, dateTime, dateTimeFull),
 				m(ExpanderPanel, {
 					expanded: this.detailsExpanded,
@@ -70,9 +71,8 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			])
 		} else {
 			return m(".header.mlr-safe-inset", [
-				// Subject and actions
 				this.renderSubjectActionsLine(viewModel, attrs),
-				// addresses and buttons
+				this.renderFolderText(viewModel),
 				this.renderAddressesAndDate(viewModel, attrs, dateTime, dateTimeFull),
 				m(ExpanderPanel, {
 					expanded: this.detailsExpanded,
@@ -83,6 +83,10 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 				m(".plr-l", this.renderBanners(attrs)),
 			])
 		}
+	}
+
+	private renderFolderText(viewModel: MailViewerViewModel) {
+		return viewModel.getFolderText() ? m(".small.uppercase.plr-l", viewModel.getFolderText()) : null
 	}
 
 	private renderAddressesAndDate(viewModel: MailViewerViewModel, attrs: MailViewerHeaderAttrs, dateTime: string, dateTimeFull: string) {

@@ -63,7 +63,6 @@ import {IconButton, IconButtonAttrs} from "../../gui/base/IconButton.js"
 import {ButtonSize} from "../../gui/base/ButtonSize.js"
 import {BottomNav} from "../../gui/nav/BottomNav.js"
 import {MobileMailActionBar} from "./MobileMailActionBar.js"
-import {showHeaderDialog} from "./MailViewerUtils.js"
 
 assertMainOrNode()
 
@@ -241,9 +240,9 @@ export class MailView implements CurrentView {
 				},
 				m(this.viewSlider, {
 					header: m(header),
-					bottomNav: styles.isSingleColumnLayout() && this.viewSlider.focusedColumn === this.mailColumn ?
-						this.renderMobileMailActionBar() :
-						m(BottomNav),
+					bottomNav: styles.isSingleColumnLayout() && this.viewSlider.focusedColumn === this.mailColumn && this.mailViewerViewModel
+						? m(MobileMailActionBar, {viewModel: this.mailViewerViewModel})
+						: m(BottomNav),
 				}),
 			)
 		}
@@ -817,12 +816,6 @@ export class MailView implements CurrentView {
 			}
 		}
 		animationOverDeferred.resolve()
-	}
-
-	private renderMobileMailActionBar(): Children {
-		return this.mailViewerViewModel
-			? m(MobileMailActionBar, {viewModel: this.mailViewerViewModel})
-			: null
 	}
 
 	private async toggleUnreadMails(mails: Mail[]): Promise<void> {

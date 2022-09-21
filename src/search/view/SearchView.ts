@@ -54,6 +54,7 @@ import {DropDownSelector, SelectorItem} from "../../gui/base/DropDownSelector.js
 import {IconButton} from "../../gui/base/IconButton.js"
 import {ButtonSize} from "../../gui/base/ButtonSize.js";
 import {BottomNav} from "../../gui/nav/BottomNav.js"
+import {MobileMailActionBar} from "../../mail/view/MobileMailActionBar.js"
 
 assertMainOrNode()
 
@@ -191,7 +192,9 @@ export class SearchView implements CurrentView {
 		this.view = (): Children => {
 			return m("#search.main-view", m(this.viewSlider, {
 				header: m(header),
-				bottomNav: m(BottomNav),
+				bottomNav: styles.isSingleColumnLayout() && this.viewSlider.focusedColumn === this.resultDetailsColumn && this.viewer._viewer?.mode === "mail"
+					? m(MobileMailActionBar, {viewModel: this.viewer._viewer.viewModel})
+					: m(BottomNav),
 			}))
 		}
 

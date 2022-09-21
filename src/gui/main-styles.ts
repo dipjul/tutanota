@@ -168,6 +168,9 @@ styles.registerStyle("main", () => {
 		".i": {
 			"font-style": "italic",
 		},
+		".uppercase": {
+			"text-transform": "uppercase"
+		},
 		".click": {
 			cursor: "pointer",
 			"-webkit-tap-highlight-color": "rgba(255, 255, 255, 0)",
