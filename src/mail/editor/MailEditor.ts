@@ -452,10 +452,7 @@ export class MailEditor implements Component<MailEditorAttrs> {
 					? this.renderPasswordFields()
 					: null,
 				m(".row", m(TextField, subjectFieldAttrs)),
-				m(
-					".flex-start.flex-wrap.ml-negative-RecipientInfoBubble",
-					attachmentButtonAttrs.map(a => m(Button, a)),
-				),
+				m(".flex-start.flex-wrap.column-gap", attachmentButtonAttrs.map(a => m(Button, a))),
 				model.getAttachments().length > 0 ? m("hr.hr") : null,
 				a.doShowToolbar() ? this.renderToolbar(model) : null,
 				m(

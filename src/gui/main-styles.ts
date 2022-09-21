@@ -816,6 +816,9 @@ styles.registerStyle("main", () => {
 		".col-reverse": {
 			"flex-direction": "column-reverse",
 		},
+		".column-gap": {
+			"column-gap": px(size.hpad),
+		},
 		".flex": {
 			display: "flex",
 		},
@@ -1484,8 +1487,6 @@ styles.registerStyle("main", () => {
 			"max-width": "300px",
 			"border-radius": px(size.border_radius),
 			"height": px(size.button_height_bubble),
-			// FIXME
-			// border: `${px(size.bubble_border_width)} solid ${theme.content_bg}`,
 			"background-color": theme.button_bubble_bg,
 			color: theme.button_bubble_fg,
 		},

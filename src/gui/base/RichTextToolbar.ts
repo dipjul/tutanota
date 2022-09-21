@@ -137,7 +137,6 @@ export class RichTextToolbar implements Component<RichTextToolbarAttrs> {
 		}
 
 		const alignButtonAttrs = (alignment: Alignment, title: TranslationKey, icon: Icons): DropdownButtonAttrs => {
-			// FIXME: I don't know how to fix it yet, it is not a regualr dropdown
 			return {
 				label: title,
 				click: () => {

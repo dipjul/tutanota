@@ -15,7 +15,7 @@ import {Icon, progressIcon} from "../../gui/base/Icon.js"
 import {formatDateWithWeekday, formatDateWithWeekdayAndYear, formatStorageSize, formatTime} from "../../misc/Formatter.js"
 import {isAndroidApp, isDesktop, isIOSApp} from "../../api/common/Env.js"
 import {Button, ButtonAttrs, ButtonColor, ButtonType} from "../../gui/base/Button.js"
-import {px, size} from "../../gui/size.js"
+import {size} from "../../gui/size.js"
 import {showProgressDialog} from "../../gui/dialogs/ProgressDialog.js"
 import Badge from "../../gui/base/Badge.js"
 import {ContentBlockingStatus, MailViewerViewModel} from "./MailViewerViewModel.js"
@@ -182,12 +182,12 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 	private renderEventBanner(viewModel: MailViewerViewModel): Children {
 		const event = viewModel.getCalendarEventAttachment()
 		return event
-			? m(EventBanner, {
+			? m(".plr-l", m(EventBanner, {
 				event: event.event,
 				method: event.method,
 				recipient: event.recipient,
 				mail: viewModel.mail,
-			})
+			}))
 			: null
 	}
 
@@ -385,11 +385,7 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 							expanded: this.filesExpanded,
 						},
 						m(".flex.col", [
-								m(".flex.flex-wrap", {
-									style: {
-										"column-gap": px(size.hpad),
-									}
-								}, this.renderAttachmentContainer(viewModel, attachments)),
+								m(".flex.flex-wrap.column-gap", this.renderAttachmentContainer(viewModel, attachments)),
 								m(".flex", m(Button, {
 									label: "saveAll_action",
 									type: ButtonType.Secondary,
