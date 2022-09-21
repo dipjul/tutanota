@@ -134,13 +134,9 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 	}
 
 	private renderSubjectActionsLine(viewModel: MailViewerViewModel, attrs: MailViewerHeaderAttrs) {
-		return m(".flex", [
+		return m(".flex.items-start", [
 			this.renderSubject(viewModel),
-			m("", {
-				style: {
-					marginRight: "12px",
-				}
-			}, this.actionButtons(attrs))
+			this.actionButtons(attrs)
 		])
 	}
 
@@ -606,7 +602,11 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 			]
 		}
 
-		return m(".action-bar.flex-end.items-center.mr-negative-s.ml-between-s.mt-xs", actions)
+		return m(".action-bar.flex-end.items-center.ml-between-s.mt-xs", {
+			style: {
+				marginRight: "6px",
+			}
+		}, actions)
 	}
 
 	private deleteButton({viewModel}: MailViewerHeaderAttrs): Children {
