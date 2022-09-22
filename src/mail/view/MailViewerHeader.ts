@@ -386,11 +386,13 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 						},
 						m(".flex.col", [
 								m(".flex.flex-wrap.column-gap", this.renderAttachmentContainer(viewModel, attachments)),
-								m(".flex", m(Button, {
-									label: "saveAll_action",
-									type: ButtonType.Secondary,
-									click: () => viewModel.downloadAll(),
-								}))
+								isIOSApp()
+									? null
+									: m(".flex", m(Button, {
+										label: "saveAll_action",
+										type: ButtonType.Secondary,
+										click: () => viewModel.downloadAll(),
+									}))
 							]
 						))
 					: null,
@@ -441,16 +443,6 @@ export class MailViewerHeader implements Component<MailViewerHeaderAttrs> {
 				staticRightText: `(${formatStorageSize(Number(attachment.size))})`
 			})
 		}
-	}
-
-	private renderDownloadAllButton(viewModel: MailViewerViewModel): Children {
-		return !isIOSApp() && viewModel.getNonInlineAttachments().length > 1
-			? m(Button, {
-				label: "saveAll_action",
-				type: ButtonType.Secondary,
-				click: () => showProgressDialog("pleaseWait_msg", viewModel.downloadAll()),
-			})
-			: null
 	}
 
 	private tutaoBadge(viewModel: MailViewerViewModel): Children {
