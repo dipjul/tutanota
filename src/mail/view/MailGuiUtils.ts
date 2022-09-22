@@ -314,8 +314,6 @@ export function showMoveMailsDropdown(model: MailModel, origin: PosRect, mails: 
 	})
 }
 
-// FIXME we try trying to extract all of these to not duplicate them in the mobile action bar
-//  but they are still kind of tightly coupled to the MailViewer instance.
 export function mailViewerMoreActions(
 	viewModel: MailViewerViewModel,
 ) {
